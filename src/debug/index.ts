@@ -3,7 +3,11 @@ import type { DebugLogEntry, DebugLogLevel, DebugLogSource } from "@/types";
 const MAX_ENTRIES = 100;
 
 const entries: DebugLogEntry[] = [];
-const sourceFilters = new Set<DebugLogSource>(["background", "sidepanel", "content"]);
+const sourceFilters = new Set<DebugLogSource>([
+  "background",
+  "sidepanel",
+  "content",
+]);
 const levelFilters = new Set<DebugLogLevel>(["log", "info", "warn", "error"]);
 let searchText = "";
 let paused = false;
@@ -11,8 +15,12 @@ let paused = false;
 const logContainer = document.getElementById("log-container") as HTMLDivElement;
 const countLabel = document.getElementById("count-label") as HTMLSpanElement;
 const searchInput = document.getElementById("search-input") as HTMLInputElement;
-const pauseButton = document.getElementById("pause-button") as HTMLButtonElement;
-const clearButton = document.getElementById("clear-button") as HTMLButtonElement;
+const pauseButton = document.getElementById(
+  "pause-button",
+) as HTMLButtonElement;
+const clearButton = document.getElementById(
+  "clear-button",
+) as HTMLButtonElement;
 const emptyState = document.getElementById("empty-state") as HTMLDivElement;
 
 function matchesFilter(entry: DebugLogEntry): boolean {
@@ -63,7 +71,12 @@ function createRow(entry: DebugLogEntry): HTMLDivElement {
 }
 
 function isScrolledToBottom(): boolean {
-  return logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 40;
+  return (
+    logContainer.scrollHeight -
+      logContainer.scrollTop -
+      logContainer.clientHeight <
+    40
+  );
 }
 
 function updateCountLabel(): void {
@@ -100,7 +113,9 @@ function rerender(): void {
   logContainer.scrollTop = logContainer.scrollHeight;
 }
 
-for (const checkbox of document.querySelectorAll<HTMLInputElement>("[data-source-filter]")) {
+for (const checkbox of document.querySelectorAll<HTMLInputElement>(
+  "[data-source-filter]",
+)) {
   checkbox.addEventListener("change", () => {
     const source = checkbox.dataset.sourceFilter as DebugLogSource;
     if (checkbox.checked) sourceFilters.add(source);
@@ -109,7 +124,9 @@ for (const checkbox of document.querySelectorAll<HTMLInputElement>("[data-source
   });
 }
 
-for (const checkbox of document.querySelectorAll<HTMLInputElement>("[data-level-filter]")) {
+for (const checkbox of document.querySelectorAll<HTMLInputElement>(
+  "[data-level-filter]",
+)) {
   checkbox.addEventListener("change", () => {
     const level = checkbox.dataset.levelFilter as DebugLogLevel;
     if (checkbox.checked) levelFilters.add(level);

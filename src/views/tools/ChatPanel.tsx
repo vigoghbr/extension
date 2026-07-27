@@ -1,13 +1,13 @@
+import { Bot, Copy, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
-import { Bot, Copy, Send } from "lucide-react";
-import { chatStore, sendChatMessage } from "@/stores/tools/chatStore";
+import cn from "@/libs/cn";
+import { emitSuccessToastr } from "@/libs/toast";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
-import { emitSuccessToastr } from "@/libs/toast";
-import cn from "@/libs/cn";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
+import { chatStore, sendChatMessage } from "@/stores/tools/chatStore";
 import type { ThemeColorSet } from "@/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 interface ChatPanelProps {
   colors: ThemeColorSet;
@@ -18,7 +18,10 @@ export function ChatPanel({ colors }: ChatPanelProps) {
   const status = useStore(chatStore, (s) => s.status);
   const errorCode = useStore(chatStore, (s) => s.errorCode);
   const fullConfig = extensionStore.getState();
-  const vigoghMenu = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu);
+  const vigoghMenu = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu,
+  );
   const chatDisclaimer = vigoghMenu?.chatDisclaimerText ?? "";
   const emptyHelpLabel = vigoghMenu?.chatEmptyHelp ?? "";
   const emptyExamples = vigoghMenu?.chatEmptyExamples ?? [];
@@ -53,7 +56,10 @@ export function ChatPanel({ colors }: ChatPanelProps) {
       if (messages[i].role === "bot") {
         if (messages[i].id !== lastAssistantIdRef.current) {
           lastAssistantIdRef.current = messages[i].id;
-          lastAssistantRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          lastAssistantRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         }
         break;
       }
@@ -92,7 +98,9 @@ export function ChatPanel({ colors }: ChatPanelProps) {
       ta.style.opacity = "0";
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); } catch (_) {}
+      try {
+        document.execCommand("copy");
+      } catch (_) {}
       document.body.removeChild(ta);
     }
     emitSuccessToastr("CHAT_COPIED");
@@ -104,9 +112,14 @@ export function ChatPanel({ colors }: ChatPanelProps) {
         {messages.length === 0 && status !== "loading" && (
           <div className="flex flex-col items-center justify-center h-full px-2 text-center">
             <Bot size={emptyIconSize} className="text-white/40 mb-3" />
-            <span className="text-xs italic text-white/80">{emptyHelpLabel}</span>
+            <span className="text-xs italic text-white/80">
+              {emptyHelpLabel}
+            </span>
             {emptyExamples.length > 0 && (
-              <div className="flex flex-col gap-1.5 w-full mt-6" style={{ maxWidth: examplesMaxWidth }}>
+              <div
+                className="flex flex-col gap-1.5 w-full mt-6"
+                style={{ maxWidth: examplesMaxWidth }}
+              >
                 {emptyExamples.map((example) => (
                   <button
                     key={example}
@@ -131,7 +144,12 @@ export function ChatPanel({ colors }: ChatPanelProps) {
           <div
             key={msg.id}
             ref={index === lastAssistantIndex ? lastAssistantRef : undefined}
-            className={cn("flex flex-col", msg.role === "user" ? "self-end items-end" : "self-start items-start")}
+            className={cn(
+              "flex flex-col",
+              msg.role === "user"
+                ? "self-end items-end"
+                : "self-start items-start",
+            )}
             style={{ maxWidth: messageMaxWidth }}
           >
             <div
@@ -162,8 +180,15 @@ export function ChatPanel({ colors }: ChatPanelProps) {
                   <TooltipTrigger asChild>
                     <button
                       className="flex items-center gap-1 px-1.5 h-6 rounded bg-transparent text-white/60 hover:text-white cursor-pointer border-none text-[11px]"
-                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(msg.text); }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCopy(msg.text);
+                      }}
                     >
                       <span>{copyLabel}</span>
                       <Copy size={copyIconSize} />
@@ -202,7 +227,10 @@ export function ChatPanel({ colors }: ChatPanelProps) {
 
       <div
         className="px-3 pb-3 pt-1 shrink-0 flex flex-col gap-1.5"
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
         onDrop={(e) => {
           e.preventDefault();
           const text = e.dataTransfer.getData("text/plain");
@@ -210,32 +238,39 @@ export function ChatPanel({ colors }: ChatPanelProps) {
         }}
       >
         <div className="flex gap-2 items-end">
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          className="flex-1 text-sm bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-white placeholder:text-white/70 resize-none outline-none focus:border-white/20"
-          style={{ maxHeight: "80px", overflowY: "auto" }}
-          placeholder={placeholderLabel}
-          value={input}
-          maxLength={maxLength}
-          disabled={status === "loading"}
-          onMouseDown={(e) => e.stopPropagation()}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              className="vigogh-shine-btn flex items-center justify-center w-8 h-8 rounded-md text-white cursor-pointer border-none shrink-0 disabled:opacity-40"
-              disabled={!input.trim() || status === "loading"}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSubmit(); }}
-            >
-              <Send size={13} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{sendLabel}</TooltipContent>
-        </Tooltip>
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            className="flex-1 text-sm bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-white placeholder:text-white/70 resize-none outline-none focus:border-white/20"
+            style={{ maxHeight: "80px", overflowY: "auto" }}
+            placeholder={placeholderLabel}
+            value={input}
+            maxLength={maxLength}
+            disabled={status === "loading"}
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="vigogh-shine-btn flex items-center justify-center w-8 h-8 rounded-md text-white cursor-pointer border-none shrink-0 disabled:opacity-40"
+                disabled={!input.trim() || status === "loading"}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSubmit();
+                }}
+              >
+                <Send size={13} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{sendLabel}</TooltipContent>
+          </Tooltip>
         </div>
         <div className="w-full text-center">
           <span className="text-[10px] text-white/60">

@@ -31,7 +31,9 @@ export class ApiError extends Error {
   }
 }
 
-function getResponse(error: unknown): { status?: number; data?: unknown } | null {
+function getResponse(
+  error: unknown,
+): { status?: number; data?: unknown } | null {
   const e = error as { response?: { status?: number; data?: unknown } } | null;
   return e?.response ?? null;
 }
@@ -68,7 +70,8 @@ function showSuccessToast(body: unknown): void {
 }
 
 function getLocal(): LocalRunner | null {
-  const fn = (globalThis as { __vigoghApiLocal?: LocalRunner }).__vigoghApiLocal;
+  const fn = (globalThis as { __vigoghApiLocal?: LocalRunner })
+    .__vigoghApiLocal;
   return typeof fn === "function" ? fn : null;
 }
 
@@ -117,9 +120,7 @@ async function dispatch<T>(
 ): Promise<ApiResponse<T>> {
   const payload = { method, path, body, headers: config?.headers };
   const local = getLocal();
-  const result = local
-    ? await local(payload)
-    : await sendViaRuntime(payload);
+  const result = local ? await local(payload) : await sendViaRuntime(payload);
   if (!result.ok) {
     const error = new ApiError({ status: result.status, data: result.data });
     if (!isUnauthorizedError(error)) {

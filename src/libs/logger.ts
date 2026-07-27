@@ -207,9 +207,9 @@ export const logger = {
 };
 
 export function installGlobalHandlers(): void {
-  const target: EventTarget = (typeof window !== "undefined"
-    ? window
-    : self) as EventTarget;
+  const target: EventTarget = (
+    typeof window !== "undefined" ? window : self
+  ) as EventTarget;
 
   target.addEventListener("error", (event: Event) => {
     const e = event as ErrorEvent;

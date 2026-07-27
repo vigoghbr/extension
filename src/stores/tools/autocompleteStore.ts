@@ -1,12 +1,12 @@
 import { createStore } from "zustand/vanilla";
-import { extensionStore, getActiveStrategy } from "@/stores/extensionStore";
-import { isExtensionContextValid } from "@/utils/extension-context";
 import {
   emitErrorToastr,
   emitLoadingToastr,
   emitNeutralToastr,
   toast,
 } from "@/libs/toast";
+import { extensionStore, getActiveStrategy } from "@/stores/extensionStore";
+import { isExtensionContextValid } from "@/utils/extension-context";
 
 type AsyncStatus = "idle" | "loading" | "success" | "error";
 
@@ -41,15 +41,6 @@ export function clearDebounce(): void {
   }
 }
 
-function resetOverlayState(): void {
-  extensionStore.setState({ caretCoordinates: null });
-  autocompleteStore.setState({
-    overlayVisible: false,
-    currentCompletion: "",
-    currentCompletionId: "",
-  });
-}
-
 extensionStore.subscribe((state, prev) => {
   if (state.overlayResetVersion !== prev.overlayResetVersion) {
     if (!state.currentEditor) clearDebounce();
@@ -59,7 +50,10 @@ extensionStore.subscribe((state, prev) => {
   }
 });
 
-function requestCompletionInternal(editor: HTMLElement, isResponse: boolean): void {
+function requestCompletionInternal(
+  editor: HTMLElement,
+  isResponse: boolean,
+): void {
   const extState = extensionStore.getState();
   if (extState.disabled) return;
   if (!isExtensionContextValid()) return;
@@ -70,14 +64,17 @@ function requestCompletionInternal(editor: HTMLElement, isResponse: boolean): vo
   if (!isResponse && state.suppressUntilKeydown) return;
 
   const text = strategy.getCurrentText(editor);
-  if (!isResponse && text.length < extState.config.behavior.minTextLength) return;
+  if (!isResponse && text.length < extState.config.behavior.minTextLength)
+    return;
 
   const context = strategy.getConversationContext(editor);
   const url = window.location.href;
   const newGen = state.requestGeneration + 1;
 
   autocompleteStore.setState({ requestGeneration: newGen, status: "loading" });
-  const toastId = emitLoadingToastr("GENERATING_SUGGESTION", { id: "autocomplete-loading" });
+  const toastId = emitLoadingToastr("GENERATING_SUGGESTION", {
+    id: "autocomplete-loading",
+  });
 
   chrome.runtime.sendMessage(
     {
@@ -140,7 +137,10 @@ export function scheduleCompletion(): void {
   const editor = extState.currentEditor as HTMLElement | null;
   if (!editor || !extState.config) return;
 
-  debounceTimer = setTimeout(() => requestCompletionInternal(editor, false), extState.config.behavior.debounceMs);
+  debounceTimer = setTimeout(
+    () => requestCompletionInternal(editor, false),
+    extState.config.behavior.debounceMs,
+  );
 }
 
 export function requestResponseNow(): void {
@@ -198,7 +198,11 @@ export function clearSuppress(): void {
 export function setSiteEnabled(enabled: boolean): void {
   if (!enabled) {
     clearDebounce();
-    extensionStore.setState({ disabled: true, caretCoordinates: null, sessionAutocompleteEnabled: false });
+    extensionStore.setState({
+      disabled: true,
+      caretCoordinates: null,
+      sessionAutocompleteEnabled: false,
+    });
     autocompleteStore.setState((state) => ({
       overlayVisible: false,
       currentCompletion: "",
@@ -206,7 +210,10 @@ export function setSiteEnabled(enabled: boolean): void {
       requestGeneration: state.requestGeneration + 1,
     }));
   } else {
-    extensionStore.setState({ disabled: false, sessionAutocompleteEnabled: true });
+    extensionStore.setState({
+      disabled: false,
+      sessionAutocompleteEnabled: true,
+    });
   }
 }
 
@@ -214,5 +221,7 @@ export function toggleAutocomplete(): void {
   const { disabled } = extensionStore.getState();
   const newEnabled = disabled;
   setSiteEnabled(newEnabled);
-  emitNeutralToastr(newEnabled ? "AUTOCOMPLETE_ENABLED" : "AUTOCOMPLETE_DISABLED");
+  emitNeutralToastr(
+    newEnabled ? "AUTOCOMPLETE_ENABLED" : "AUTOCOMPLETE_DISABLED",
+  );
 }

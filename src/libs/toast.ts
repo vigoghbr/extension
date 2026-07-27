@@ -13,7 +13,11 @@ function isEmpty(message: unknown): boolean {
   return typeof message !== "string" || message.trim().length === 0;
 }
 
-function reportEmpty(variant: string, message: unknown, options?: ToastOptions): void {
+function reportEmpty(
+  variant: string,
+  message: unknown,
+  options?: ToastOptions,
+): void {
   logger.error("toast:empty", {
     error: new Error(`Empty toast attempted: ${variant}`),
     variant,
@@ -102,11 +106,16 @@ interface EmitOptions {
   id?: string;
 }
 
-export function emitErrorToastr(code: string | null | undefined, options?: EmitOptions): void {
+export function emitErrorToastr(
+  code: string | null | undefined,
+  options?: EmitOptions,
+): void {
   const { config } = extensionStore.getState();
   const message = resolveErrorMessage(code, config?.messages);
   if (!message) return;
-  toast.error(message, { id: options?.id ?? `vigogh-error-${code ?? "default"}` });
+  toast.error(message, {
+    id: options?.id ?? `vigogh-error-${code ?? "default"}`,
+  });
 }
 
 export function emitSuccessToastr(code: string, options?: EmitOptions): void {
@@ -130,7 +139,10 @@ export function emitNeutralToastr(code: string, options?: EmitOptions): void {
   toast.show(message, { id: options?.id ?? `vigogh-info-${code}` });
 }
 
-export function emitLoadingToastr(code: string, options?: EmitOptions): string | number {
+export function emitLoadingToastr(
+  code: string,
+  options?: EmitOptions,
+): string | number {
   const { config } = extensionStore.getState();
   const message = resolveInfoMessage(code, config?.messages);
   if (!message) return -1;

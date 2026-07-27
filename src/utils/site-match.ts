@@ -1,6 +1,9 @@
 import type { SiteConfig } from "@/types";
 
-export function matchSite(hostname: string, sites: SiteConfig[]): SiteConfig | null {
+export function matchSite(
+  hostname: string,
+  sites: SiteConfig[],
+): SiteConfig | null {
   return (
     sites.find(
       (s) =>
@@ -10,6 +13,9 @@ export function matchSite(hostname: string, sites: SiteConfig[]): SiteConfig | n
   );
 }
 
-export function hasSiteStrategy(hostname: string, sites: SiteConfig[]): boolean {
+export function hasSiteStrategy(
+  hostname: string,
+  sites: SiteConfig[],
+): boolean {
   return matchSite(hostname, sites) !== null;
 }

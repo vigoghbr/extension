@@ -7,13 +7,21 @@ const distPath = path.join(__dirname, "dist");
 const idOverridePath = path.join(__dirname, ".extension-id");
 
 function computeIdFromPath(extPath) {
-  const hash = crypto.createHash("sha256").update(extPath).digest("hex").slice(0, 32);
-  return hash.replace(/[0-9a-f]/g, (c) => String.fromCharCode(97 + Number.parseInt(c, 16)));
+  const hash = crypto
+    .createHash("sha256")
+    .update(extPath)
+    .digest("hex")
+    .slice(0, 32);
+  return hash.replace(/[0-9a-f]/g, (c) =>
+    String.fromCharCode(97 + Number.parseInt(c, 16)),
+  );
 }
 
 function resolveExtensionId() {
-  if (process.env.VIGOGH_EXTENSION_ID) return process.env.VIGOGH_EXTENSION_ID.trim();
-  if (fs.existsSync(idOverridePath)) return fs.readFileSync(idOverridePath, "utf8").trim();
+  if (process.env.VIGOGH_EXTENSION_ID)
+    return process.env.VIGOGH_EXTENSION_ID.trim();
+  if (fs.existsSync(idOverridePath))
+    return fs.readFileSync(idOverridePath, "utf8").trim();
   return computeIdFromPath(distPath);
 }
 
@@ -56,5 +64,7 @@ for (const [bin, args] of candidateCommands()) {
 }
 
 if (!opened) {
-  console.log(`Could not launch a browser automatically. Open this URL manually: ${url}`);
+  console.log(
+    `Could not launch a browser automatically. Open this URL manually: ${url}`,
+  );
 }

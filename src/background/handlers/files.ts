@@ -69,7 +69,9 @@ export const handleMessages: BackgroundMessageHandler = (
   }
   if (message.action === "files_rename") {
     api
-      .patch(getEndpoint("filesById", { fileId: message.fileId }), { name: message.name })
+      .patch(getEndpoint("filesById", { fileId: message.fileId }), {
+        name: message.name,
+      })
       .then(({ data }) => sendResponse({ success: true, file: data.data }))
       .catch((error) => respondFromApiError(error, sendResponse));
     return true;

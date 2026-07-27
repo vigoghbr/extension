@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MARGIN, type Position } from "./useDraggable";
 
 export type ResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -21,7 +21,16 @@ export function useResizable(
   containerRef: RefObject<HTMLDivElement | null>,
   options: Options,
 ) {
-  const { minWidth, minHeight, maxWidth, maxHeight, initialWidth, initialHeight, position, onPositionChange } = options;
+  const {
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
+    initialWidth,
+    initialHeight,
+    position,
+    onPositionChange,
+  } = options;
   const [size, setSize] = useState<Size | null>(null);
   const userResizedRef = useRef(false);
 
@@ -29,22 +38,45 @@ export function useResizable(
     if (userResizedRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const maxW = Math.min(maxWidth ?? Infinity, window.innerWidth - 2 * MARGIN);
-    const maxH = Math.min(maxHeight ?? Infinity, window.innerHeight - 2 * MARGIN);
+    const maxH = Math.min(
+      maxHeight ?? Infinity,
+      window.innerHeight - 2 * MARGIN,
+    );
     const baseWidth = initialWidth ?? rect.width;
     setSize({
       width: Math.max(minWidth, Math.min(maxW, baseWidth)),
-      height: initialHeight != null ? Math.max(minHeight, Math.min(maxH, initialHeight)) : initialHeight,
+      height:
+        initialHeight != null
+          ? Math.max(minHeight, Math.min(maxH, initialHeight))
+          : initialHeight,
     });
-  }, [containerRef, initialWidth, initialHeight, minWidth, minHeight, maxWidth, maxHeight]);
+  }, [
+    containerRef,
+    initialWidth,
+    initialHeight,
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
+  ]);
 
   useEffect(() => {
     const clampToViewport = () => {
       setSize((s) => {
         if (!s) return s;
-        const maxW = Math.min(maxWidth ?? Infinity, window.innerWidth - 2 * MARGIN);
-        const maxH = Math.min(maxHeight ?? Infinity, window.innerHeight - 2 * MARGIN);
+        const maxW = Math.min(
+          maxWidth ?? Infinity,
+          window.innerWidth - 2 * MARGIN,
+        );
+        const maxH = Math.min(
+          maxHeight ?? Infinity,
+          window.innerHeight - 2 * MARGIN,
+        );
         const newWidth = Math.max(minWidth, Math.min(maxW, s.width));
-        const newHeight = s.height != null ? Math.max(minHeight, Math.min(maxH, s.height)) : s.height;
+        const newHeight =
+          s.height != null
+            ? Math.max(minHeight, Math.min(maxH, s.height))
+            : s.height;
         if (newWidth === s.width && newHeight === s.height) return s;
         return { width: newWidth, height: newHeight };
       });
@@ -77,25 +109,38 @@ export function useResizable(
 
       if (edge.includes("e")) {
         const widthCap = window.innerWidth - startLeft - MARGIN;
-        const upperWidth = maxWidth != null ? Math.min(maxWidth, widthCap) : widthCap;
+        const upperWidth =
+          maxWidth != null ? Math.min(maxWidth, widthCap) : widthCap;
         newWidth = Math.max(minWidth, Math.min(upperWidth, startWidth + dx));
       }
       if (edge.includes("w")) {
         const widthCap = startLeft + startWidth - MARGIN;
-        const upperWidth = maxWidth != null ? Math.min(maxWidth, widthCap) : widthCap;
-        const dxClamped = Math.max(startWidth - upperWidth, Math.min(startWidth - minWidth, dx));
+        const upperWidth =
+          maxWidth != null ? Math.min(maxWidth, widthCap) : widthCap;
+        const dxClamped = Math.max(
+          startWidth - upperWidth,
+          Math.min(startWidth - minWidth, dx),
+        );
         newWidth = startWidth - dxClamped;
         newLeft = startLeft + dxClamped;
       }
       if (edge.includes("s")) {
         const heightCap = window.innerHeight - startTop - MARGIN;
-        const upperHeight = maxHeight != null ? Math.min(maxHeight, heightCap) : heightCap;
-        newHeight = Math.max(minHeight, Math.min(upperHeight, startHeight + dy));
+        const upperHeight =
+          maxHeight != null ? Math.min(maxHeight, heightCap) : heightCap;
+        newHeight = Math.max(
+          minHeight,
+          Math.min(upperHeight, startHeight + dy),
+        );
       }
       if (edge.includes("n")) {
         const heightCap = startTop + startHeight - MARGIN;
-        const upperHeight = maxHeight != null ? Math.min(maxHeight, heightCap) : heightCap;
-        const dyClamped = Math.max(startHeight - upperHeight, Math.min(startHeight - minHeight, dy));
+        const upperHeight =
+          maxHeight != null ? Math.min(maxHeight, heightCap) : heightCap;
+        const dyClamped = Math.max(
+          startHeight - upperHeight,
+          Math.min(startHeight - minHeight, dy),
+        );
         newHeight = startHeight - dyClamped;
         newTop = startTop + dyClamped;
       }

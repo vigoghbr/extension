@@ -95,7 +95,9 @@ export function extractPageDataInPage(
   function extractMetadata(): string {
     const title = normalize(document.querySelector("title")?.textContent ?? "");
     const description = normalize(
-      document.querySelector('meta[name="description"]')?.getAttribute("content") ?? "",
+      document
+        .querySelector('meta[name="description"]')
+        ?.getAttribute("content") ?? "",
     );
     const headings: string[] = [];
     document.querySelectorAll("h1, h2, h3").forEach((el) => {
@@ -118,7 +120,9 @@ export function extractPageDataInPage(
     if (description) parts.push(`Description: ${description}`);
     if (headings.length > 0) parts.push(`Headings: ${headings.join(" | ")}`);
     if (links.length > 0) {
-      parts.push(`Links: ${links.map((l) => `${l.text} → ${l.href}`).join("; ")}`);
+      parts.push(
+        `Links: ${links.map((l) => `${l.text} → ${l.href}`).join("; ")}`,
+      );
     }
     return parts.join("\n");
   }
@@ -129,14 +133,16 @@ export function extractPageDataInPage(
       const id = el.getAttribute("id") || el.getAttribute("name") || "";
       const label = id
         ? normalize(
-            document.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent ?? "",
+            document.querySelector(`label[for="${CSS.escape(id)}"]`)
+              ?.textContent ?? "",
           )
         : "";
       const placeholder = el.getAttribute("placeholder") || "";
       const type = el.getAttribute("type") || el.tagName.toLowerCase();
       const value = normalize(
         String(
-          (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value || "",
+          (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)
+            .value || "",
         ),
       );
       if (type === "hidden") return;

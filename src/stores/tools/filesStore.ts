@@ -2,9 +2,15 @@ import { createStore } from "zustand/vanilla";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
 import { emitErrorToastr, emitSuccessToastr, toast } from "@/libs/toast";
-import type { FileItem, FilesFetchResponse, FilesUploadResponse, FilesRenameResponse, FilesDeleteResponse } from "@/types";
-import { isExtensionContextValid } from "@/utils/extension-context";
 import { extensionStore } from "@/stores/extensionStore";
+import type {
+  FileItem,
+  FilesDeleteResponse,
+  FilesFetchResponse,
+  FilesRenameResponse,
+  FilesUploadResponse,
+} from "@/types";
+import { isExtensionContextValid } from "@/utils/extension-context";
 import { sendBackgroundRequest } from "@/utils/runtime-request";
 import { handleToolError } from "@/utils/tool-error";
 
@@ -36,17 +42,27 @@ function toastErrorCode(errorCode: string | undefined): boolean {
 export function fetchFiles(): void {
   if (!isExtensionContextValid()) return;
   filesStore.setState({ status: "loading", error: null });
-  sendBackgroundRequest<FilesFetchResponse>({ action: "files_fetch" }, (response) => {
-    if (!response?.success) {
-      if (toastErrorCode(response?.errorCode)) {
-        filesStore.setState({ status: "error", error: response?.errorCode ?? response?.error ?? null });
+  sendBackgroundRequest<FilesFetchResponse>(
+    { action: "files_fetch" },
+    (response) => {
+      if (!response?.success) {
+        if (toastErrorCode(response?.errorCode)) {
+          filesStore.setState({
+            status: "error",
+            error: response?.errorCode ?? response?.error ?? null,
+          });
+          return;
+        }
+        handleToolError();
         return;
       }
-      handleToolError();
-      return;
-    }
-    filesStore.setState({ items: response.files ?? [], status: "success", error: null });
-  });
+      filesStore.setState({
+        items: response.files ?? [],
+        status: "success",
+        error: null,
+      });
+    },
+  );
 }
 
 export function uploadFile(file: File): void {

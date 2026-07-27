@@ -1,19 +1,40 @@
+import {
+  Bot,
+  BotOff,
+  FileSpreadsheet,
+  FileText,
+  FileType,
+  FolderOpen,
+  Pencil,
+  Presentation,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
-import { FileText, FileSpreadsheet, Presentation, FileType, FolderOpen, Upload, Pencil, Trash2, Bot, BotOff } from "lucide-react";
-import { filesStore, fetchFiles, uploadFile, renameFile, deleteFile, toggleFileAI } from "@/stores/tools/filesStore";
-import { triggerAttach } from "@/utils/files-attach";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
-import { Window } from "@/views/Window";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
+import {
+  deleteFile,
+  fetchFiles,
+  filesStore,
+  renameFile,
+  toggleFileAI,
+  uploadFile,
+} from "@/stores/tools/filesStore";
 import type { FileItem } from "@/types";
+import { triggerAttach } from "@/utils/files-attach";
 import type { PopoverProps } from "@/views/tools/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
+import { Window } from "@/views/Window";
 
 function categoryIcon(category: string) {
-  if (category === "spreadsheet") return <FileSpreadsheet size={16} className="shrink-0" />;
-  if (category === "presentation") return <Presentation size={16} className="shrink-0" />;
-  if (category === "document") return <FileType size={16} className="shrink-0" />;
+  if (category === "spreadsheet")
+    return <FileSpreadsheet size={16} className="shrink-0" />;
+  if (category === "presentation")
+    return <Presentation size={16} className="shrink-0" />;
+  if (category === "document")
+    return <FileType size={16} className="shrink-0" />;
   return <FileText size={16} className="shrink-0" />;
 }
 
@@ -22,17 +43,44 @@ function fileExtension(item: FileItem): string {
   return ext ?? item.category.toUpperCase();
 }
 
-export function FilesPopover({ colors, label, bottom, right, onClose }: PopoverProps) {
+export function FilesPopover({
+  colors,
+  label,
+  bottom,
+  right,
+  onClose,
+}: PopoverProps) {
   const items = useStore(filesStore, (s) => s.items);
   const status = useStore(filesStore, (s) => s.status);
   const uploadStatus = useStore(filesStore, (s) => s.uploadStatus);
-  const sendFileLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesSendLabel ?? "");
-  const editLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesEditLabel ?? "");
-  const aiEnableLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesAIEnableLabel ?? "");
-  const aiDisableLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesAIDisableLabel ?? "");
-  const deleteLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteLabel ?? "");
-  const deleteConfirmLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteConfirmLabel ?? "");
-  const attachHint = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.filesAttachHint ?? "");
+  const sendFileLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesSendLabel ?? "",
+  );
+  const editLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesEditLabel ?? "",
+  );
+  const aiEnableLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesAIEnableLabel ?? "",
+  );
+  const aiDisableLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesAIDisableLabel ?? "",
+  );
+  const deleteLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteLabel ?? "",
+  );
+  const deleteConfirmLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteConfirmLabel ?? "",
+  );
+  const attachHint = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.filesAttachHint ?? "",
+  );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.files);
   const [dragging, setDragging] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,13 +116,21 @@ export function FilesPopover({ colors, label, bottom, right, onClose }: PopoverP
       onClose={onClose}
       disclaimer={attachHint}
     >
-      <input ref={inputRef} type="file" className="hidden" onChange={handleFileChange} />
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       <div className="py-1 flex-1 overflow-y-auto">
         {status === "loading" && items.length === 0 && (
           <div className="py-4 px-3 flex flex-col gap-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-10 rounded-md bg-white/5 animate-pulse" />
+              <div
+                key={i}
+                className="h-10 rounded-md bg-white/5 animate-pulse"
+              />
             ))}
           </div>
         )}
@@ -97,7 +153,6 @@ export function FilesPopover({ colors, label, bottom, right, onClose }: PopoverP
           />
         ))}
       </div>
-
     </Window>
   );
 }
@@ -116,13 +171,31 @@ interface FileRowProps {
   onAttach: () => void;
 }
 
-function FileRow({ item, isDragging, hoverBg, editLabel, aiEnableLabel, aiDisableLabel, deleteLabel, deleteConfirmLabel, onDragStart, onDragEnd, onAttach }: FileRowProps) {
+function FileRow({
+  item,
+  isDragging,
+  hoverBg,
+  editLabel,
+  aiEnableLabel,
+  aiDisableLabel,
+  deleteLabel,
+  deleteConfirmLabel,
+  onDragStart,
+  onDragEnd,
+  onAttach,
+}: FileRowProps) {
   const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(item.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const badgeBackground = useStore(stylesStore, (s) => s.styles?.filesPopover.badgeBackground ?? "transparent");
-  const badgeColor = useStore(stylesStore, (s) => s.styles?.filesPopover.badgeColor ?? "inherit");
+  const badgeBackground = useStore(
+    stylesStore,
+    (s) => s.styles?.filesPopover.badgeBackground ?? "transparent",
+  );
+  const badgeColor = useStore(
+    stylesStore,
+    (s) => s.styles?.filesPopover.badgeColor ?? "inherit",
+  );
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -191,15 +264,21 @@ function FileRow({ item, isDragging, hoverBg, editLabel, aiEnableLabel, aiDisabl
         }
         e.dataTransfer.setData("text/plain", item.name);
         e.dataTransfer.setData("application/x-vigogh-text", item.name);
-        e.dataTransfer.setData("application/x-vigogh-file", JSON.stringify({ id: item.id, originalFilename: item.originalFilename, mimeType: item.mimeType, downloadUrl: item.downloadUrl }));
+        e.dataTransfer.setData(
+          "application/x-vigogh-file",
+          JSON.stringify({
+            id: item.id,
+            originalFilename: item.originalFilename,
+            mimeType: item.mimeType,
+            downloadUrl: item.downloadUrl,
+          }),
+        );
         e.dataTransfer.effectAllowed = "copy";
         onDragStart();
       }}
       onDragEnd={onDragEnd}
     >
-      <span className="text-white/50">
-        {categoryIcon(item.category)}
-      </span>
+      <span className="text-white/50">{categoryIcon(item.category)}</span>
       {editing ? (
         <input
           ref={inputRef}

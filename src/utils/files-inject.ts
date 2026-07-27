@@ -21,7 +21,11 @@ function resolveStrategies(): SiteFileAttachStrategy[] {
   );
 }
 
-function showPasteHint(target: HTMLElement, message: string, dismissMs: number): void {
+function showPasteHint(
+  target: HTMLElement,
+  message: string,
+  dismissMs: number,
+): void {
   if (!message) return;
   const rect = target.getBoundingClientRect();
   const hint = document.createElement("div");
@@ -46,9 +50,15 @@ function isWildcardAccept(token: string): boolean {
   return token === "" || token === "*" || token === "*/*";
 }
 
-function acceptMatchesMime(accept: string, mimeType: string): "specific" | "wildcard" | "none" {
+function acceptMatchesMime(
+  accept: string,
+  mimeType: string,
+): "specific" | "wildcard" | "none" {
   if (!accept) return "wildcard";
-  const tokens = accept.split(",").map((a) => a.trim()).filter(Boolean);
+  const tokens = accept
+    .split(",")
+    .map((a) => a.trim())
+    .filter(Boolean);
   if (tokens.length === 0) return "wildcard";
   let hasWildcard = false;
   for (const t of tokens) {
@@ -57,14 +67,20 @@ function acceptMatchesMime(accept: string, mimeType: string): "specific" | "wild
       continue;
     }
     if (t === mimeType) return "specific";
-    if (t.endsWith("/*") && mimeType.startsWith(t.slice(0, -1))) return "specific";
+    if (t.endsWith("/*") && mimeType.startsWith(t.slice(0, -1)))
+      return "specific";
     if (t.startsWith(".")) continue;
   }
   return hasWildcard ? "wildcard" : "none";
 }
 
-function findFileInput(selector: string, mimeType: string): HTMLInputElement | null {
-  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(selector));
+function findFileInput(
+  selector: string,
+  mimeType: string,
+): HTMLInputElement | null {
+  const inputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>(selector),
+  );
   if (inputs.length === 0) return null;
   let wildcardMatch: HTMLInputElement | null = null;
   for (const el of inputs) {
@@ -87,8 +103,10 @@ function pickSelector(
   strategy: Extract<SiteFileAttachStrategy, { type: "fileInput" }>,
   mimeType: string,
 ): string | null {
-  if (mimeType.startsWith("image/") && strategy.imageSelector) return strategy.imageSelector;
-  if (mimeType.startsWith("video/") && strategy.videoSelector) return strategy.videoSelector;
+  if (mimeType.startsWith("image/") && strategy.imageSelector)
+    return strategy.imageSelector;
+  if (mimeType.startsWith("video/") && strategy.videoSelector)
+    return strategy.videoSelector;
   return strategy.anySelector ?? null;
 }
 

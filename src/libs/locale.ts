@@ -1,7 +1,10 @@
-import type { LocaleString } from "@/types";
 import { regionsStore } from "@/stores/regionsStore";
+import type { LocaleString } from "@/types";
 
-export function getLocale(v: LocaleString | undefined, fallback: LocaleString = ""): string {
+export function getLocale(
+  v: LocaleString | undefined,
+  fallback: LocaleString = "",
+): string {
   const { region } = regionsStore.getState();
   const resolved = v ?? fallback;
   if (typeof resolved === "string") return resolved;

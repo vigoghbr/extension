@@ -1,7 +1,10 @@
-import api, { extractApiErrorCode, isUnauthorizedError } from "@/libs/api-dispatch";
-import { getEndpoint } from "@/libs/endpoints";
-import type { ToolResponse, ExtensionMessage } from "@/types";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
+import api, {
+  extractApiErrorCode,
+  isUnauthorizedError,
+} from "@/libs/api-dispatch";
+import { getEndpoint } from "@/libs/endpoints";
+import type { ToolResponse } from "@/types";
 
 async function handleTextTransformRequest(
   text: string,
@@ -13,7 +16,10 @@ async function handleTextTransformRequest(
   }
 
   try {
-    const { data } = await api.post(getEndpoint("transforms"), { text, action });
+    const { data } = await api.post(getEndpoint("transforms"), {
+      text,
+      action,
+    });
     return { success: true, suggestions: data.data?.suggestions || [] };
   } catch (error) {
     if (isUnauthorizedError(error)) {
@@ -27,7 +33,9 @@ async function handleTextTransformRequest(
   }
 }
 
-async function handleSidepanelTextTransform(action: string): Promise<ToolResponse> {
+async function handleSidepanelTextTransform(
+  action: string,
+): Promise<ToolResponse> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   if (!tab?.id) return { success: false, error: "No active tab" };
@@ -47,7 +55,10 @@ async function handleSidepanelTextTransform(action: string): Promise<ToolRespons
     return { success: false, error: "no_selection" };
   }
 
-  const transformResult = await handleTextTransformRequest(selectedText.trim(), action);
+  const transformResult = await handleTextTransformRequest(
+    selectedText.trim(),
+    action,
+  );
   if (!transformResult.success || !transformResult.suggestions?.length) {
     return { success: false, error: transformResult.error };
   }
@@ -61,10 +72,14 @@ async function handleSidepanelTextTransform(action: string): Promise<ToolRespons
         const active = document.activeElement as HTMLElement | null;
         const selection = window.getSelection();
         const target =
-          active && (active.isContentEditable || active.tagName === "INPUT" || active.tagName === "TEXTAREA")
+          active &&
+          (active.isContentEditable ||
+            active.tagName === "INPUT" ||
+            active.tagName === "TEXTAREA")
             ? active
             : ((selection && selection.rangeCount > 0
-                ? (selection.getRangeAt(0).startContainer.parentElement as HTMLElement | null)
+                ? (selection.getRangeAt(0).startContainer
+                    .parentElement as HTMLElement | null)
                 : null) ?? document.body);
 
         const dt = new DataTransfer();
@@ -81,7 +96,10 @@ async function handleSidepanelTextTransform(action: string): Promise<ToolRespons
         const handled = !target.dispatchEvent(pasteEvent);
         if (handled) return;
 
-        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement
+        ) {
           const start = target.selectionStart ?? target.value.length;
           const end = target.selectionEnd ?? start;
           const proto =
@@ -89,7 +107,8 @@ async function handleSidepanelTextTransform(action: string): Promise<ToolRespons
               ? HTMLTextAreaElement.prototype
               : HTMLInputElement.prototype;
           const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
-          const newValue = target.value.slice(0, start) + newText + target.value.slice(end);
+          const newValue =
+            target.value.slice(0, start) + newText + target.value.slice(end);
           if (setter) setter.call(target, newValue);
           else target.value = newValue;
           target.selectionStart = start + newText.length;
@@ -110,7 +129,11 @@ async function handleSidepanelTextTransform(action: string): Promise<ToolRespons
   return { success: true };
 }
 
-export const handleMessages: BackgroundMessageHandler = (message, _sender, sendResponse) => {
+export const handleMessages: BackgroundMessageHandler = (
+  message,
+  _sender,
+  sendResponse,
+) => {
   if (message.action === "transforms_request") {
     handleTextTransformRequest(message.text, message.transformAction)
       .then(sendResponse)
@@ -124,7 +147,10 @@ export const handleMessages: BackgroundMessageHandler = (message, _sender, sendR
     handleSidepanelTextTransform(message.transformAction)
       .then(sendResponse)
       .catch((error: Error) => {
-        console.error("Background: Sidepanel transforms request failed:", error);
+        console.error(
+          "Background: Sidepanel transforms request failed:",
+          error,
+        );
         sendResponse({ success: false, error: error.message });
       });
     return true;

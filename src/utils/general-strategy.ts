@@ -1,9 +1,14 @@
-import type { CaretCoordinates, ConversationMessage, ResolvedSitesFallbackConfig, SiteStrategy } from "@/types";
 import {
   insertTextIntoContentEditable,
   replaceAllTextInContentEditable,
 } from "@/libs/text-insertion";
 import { measureWidth } from "@/libs/text-measure";
+import type {
+  CaretCoordinates,
+  ConversationMessage,
+  ResolvedSitesFallbackConfig,
+  SiteStrategy,
+} from "@/types";
 
 export const DEFAULT_GENERAL_SELECTOR = [
   'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="image"])',
@@ -12,15 +17,24 @@ export const DEFAULT_GENERAL_SELECTOR = [
   '[contenteditable=""]',
 ].join(", ");
 
-function isInputLike(editor: HTMLElement): editor is HTMLInputElement | HTMLTextAreaElement {
-  return editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement;
+function isInputLike(
+  editor: HTMLElement,
+): editor is HTMLInputElement | HTMLTextAreaElement {
+  return (
+    editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement
+  );
 }
 
-function getNativeSetter(el: HTMLInputElement | HTMLTextAreaElement): ((v: string) => void) | undefined {
-  const proto = el instanceof HTMLTextAreaElement
-    ? HTMLTextAreaElement.prototype
-    : HTMLInputElement.prototype;
-  return Object.getOwnPropertyDescriptor(proto, "value")?.set as ((v: string) => void) | undefined;
+function getNativeSetter(
+  el: HTMLInputElement | HTMLTextAreaElement,
+): ((v: string) => void) | undefined {
+  const proto =
+    el instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+  return Object.getOwnPropertyDescriptor(proto, "value")?.set as
+    | ((v: string) => void)
+    | undefined;
 }
 
 export class GeneralInputStrategy implements SiteStrategy {
@@ -51,21 +65,34 @@ export class GeneralInputStrategy implements SiteStrategy {
       const style = window.getComputedStyle(editor);
       const paddingLeft = parseFloat(style.paddingLeft) || 0;
       const paddingTop = parseFloat(style.paddingTop) || 0;
-      const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) || rect.height;
+      const lineHeight =
+        parseFloat(style.lineHeight) ||
+        parseFloat(style.fontSize) ||
+        rect.height;
       const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       const caretIndex = editor.selectionStart ?? editor.value.length;
       const before = editor.value.slice(0, caretIndex);
 
       if (editor instanceof HTMLTextAreaElement) {
         const lastNewline = before.lastIndexOf("\n");
-        const currentLine = lastNewline >= 0 ? before.slice(lastNewline + 1) : before;
+        const currentLine =
+          lastNewline >= 0 ? before.slice(lastNewline + 1) : before;
         const lineIndex = before.length - before.replace(/\n/g, "").length;
-        const left = rect.left + paddingLeft - editor.scrollLeft + measureWidth(currentLine, font);
-        const top = rect.top + paddingTop + lineIndex * lineHeight - editor.scrollTop;
+        const left =
+          rect.left +
+          paddingLeft -
+          editor.scrollLeft +
+          measureWidth(currentLine, font);
+        const top =
+          rect.top + paddingTop + lineIndex * lineHeight - editor.scrollTop;
         return { top, left, height: lineHeight };
       }
 
-      const left = rect.left + paddingLeft - editor.scrollLeft + measureWidth(before, font);
+      const left =
+        rect.left +
+        paddingLeft -
+        editor.scrollLeft +
+        measureWidth(before, font);
       const top = rect.top + paddingTop;
       return { top, left, height: lineHeight };
     }
@@ -77,7 +104,11 @@ export class GeneralInputStrategy implements SiteStrategy {
       if (isInsideEditor) {
         const caretRect = range.getBoundingClientRect();
         if (caretRect.width !== 0 || caretRect.height !== 0) {
-          return { top: caretRect.top, left: caretRect.right, height: caretRect.height };
+          return {
+            top: caretRect.top,
+            left: caretRect.right,
+            height: caretRect.height,
+          };
         }
         const marker = document.createElement("span");
         marker.textContent = "​";
@@ -88,7 +119,11 @@ export class GeneralInputStrategy implements SiteStrategy {
           const markerRect = marker.getBoundingClientRect();
           marker.remove();
           if (markerRect.width !== 0 || markerRect.height !== 0) {
-            return { top: markerRect.top, left: markerRect.right, height: markerRect.height };
+            return {
+              top: markerRect.top,
+              left: markerRect.right,
+              height: markerRect.height,
+            };
           }
         } catch {
           marker.remove();
@@ -106,7 +141,8 @@ export class GeneralInputStrategy implements SiteStrategy {
     }
     editor.focus();
     const start = editor.selectionStart ?? editor.value.length;
-    const newValue = editor.value.slice(0, start) + text + editor.value.slice(start);
+    const newValue =
+      editor.value.slice(0, start) + text + editor.value.slice(start);
     const set = getNativeSetter(editor);
     if (set) set.call(editor, newValue);
     else editor.value = newValue;
@@ -132,13 +168,18 @@ export class GeneralInputStrategy implements SiteStrategy {
     editor.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  replaceSelectedText(editor: HTMLElement, newText: string, savedRange: Range): void {
+  replaceSelectedText(
+    editor: HTMLElement,
+    newText: string,
+    savedRange: Range,
+  ): void {
     editor.focus();
 
     if (isInputLike(editor)) {
       const start = savedRange.startOffset;
       const end = savedRange.endOffset;
-      const newValue = editor.value.slice(0, start) + newText + editor.value.slice(end);
+      const newValue =
+        editor.value.slice(0, start) + newText + editor.value.slice(end);
       const set = getNativeSetter(editor);
       if (set) set.call(editor, newValue);
       else editor.value = newValue;
@@ -171,7 +212,12 @@ export class GeneralInputStrategy implements SiteStrategy {
     editor.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  pasteText(editor: HTMLElement, text: string, mode: "insert" | "replaceAll" | "replaceSelected", savedRange?: Range): void {
+  pasteText(
+    editor: HTMLElement,
+    text: string,
+    mode: "insert" | "replaceAll" | "replaceSelected",
+    savedRange?: Range,
+  ): void {
     pasteTextIntoEditor(editor, text, mode, savedRange);
   }
 
@@ -231,7 +277,8 @@ export function pasteTextIntoEditor(
   if (isInputLike(editor)) {
     const start = editor.selectionStart ?? editor.value.length;
     const end = editor.selectionEnd ?? start;
-    const newValue = editor.value.slice(0, start) + text + editor.value.slice(end);
+    const newValue =
+      editor.value.slice(0, start) + text + editor.value.slice(end);
     const set = getNativeSetter(editor);
     if (set) set.call(editor, newValue);
     else editor.value = newValue;

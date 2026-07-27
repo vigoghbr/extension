@@ -1,11 +1,11 @@
 import { FolderOpen, MessageSquare, NotebookPen, Sparkles } from "lucide-react";
 import React from "react";
-import { FilesPopover } from "@/views/tools/FilesPopover";
-import { NotesPopover } from "@/views/tools/NotesPopover";
-import { MessagesPopover } from "@/views/tools/MessagesPopover";
-import { AiPopover } from "@/views/AiPopover";
-import type { PopoverToolRegistration } from "@/views/tools/types";
 import type { ResolvedAiMenuConfig } from "@/types";
+import { AiPopover } from "@/views/AiPopover";
+import { FilesPopover } from "@/views/tools/FilesPopover";
+import { MessagesPopover } from "@/views/tools/MessagesPopover";
+import { NotesPopover } from "@/views/tools/NotesPopover";
+import type { PopoverToolRegistration } from "@/views/tools/types";
 
 type VigoghMenuLabels = NonNullable<ResolvedAiMenuConfig["vigoghMenu"]>;
 

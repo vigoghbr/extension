@@ -6,7 +6,6 @@ import type {
   PageSessionData,
 } from "@/types";
 import "@/libs/api-runner";
-import api from "@/libs/api-dispatch";
 import { maybeRefreshAuthToken } from "@/libs/auth";
 
 initLogger("background");
@@ -110,7 +109,7 @@ async function capturePageData(tabId: number, windowId: number): Promise<void> {
     args: [mainContentLimit, maxLinks],
   });
 
-  if (!results || !results[0] || !results[0].result) {
+  if (!results?.[0]?.result) {
     throw new Error("No results from content script");
   }
 
@@ -326,7 +325,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           .get<{
             "vigogh-pending-custom-token"?: string;
             "vigogh-pending-custom-token-expires-at"?: number;
-          }>(["vigogh-pending-custom-token", "vigogh-pending-custom-token-expires-at"])
+          }>([
+            "vigogh-pending-custom-token",
+            "vigogh-pending-custom-token-expires-at",
+          ])
           .then((stored) => {
             const customToken = stored["vigogh-pending-custom-token"];
             const expiresAt = stored["vigogh-pending-custom-token-expires-at"];

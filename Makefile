@@ -9,11 +9,14 @@ version:
 %:
 	@:
 
-build:
+lint:
+	yarn lint:fix
+
+build: lint
 	yarn build
 
-zip:
-	NODE_ENV=production node build.js && cd dist && zip -r ../extension.zip .
+zip: build
+	cd dist && zip -r ../extension.zip .
 	@size=$$(du -k extension.zip | cut -f1); echo "📦 extension.zip — $${size} KB"
 
 remove-zip:

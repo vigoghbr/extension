@@ -107,10 +107,10 @@ let captureCooldownMs = 1000;
 let lastCaptureTime = 0;
 
 chrome.storage.local
-  .get<{ "vigogh-settings"?: ExtensionSettings; "vigogh-styles"?: ExtensionStyles }>([
-    "vigogh-settings",
-    "vigogh-styles",
-  ])
+  .get<{
+    "vigogh-settings"?: ExtensionSettings;
+    "vigogh-styles"?: ExtensionStyles;
+  }>(["vigogh-settings", "vigogh-styles"])
   .then((stored) => {
     const config = stored["vigogh-settings"];
     const styles = stored["vigogh-styles"];
@@ -177,7 +177,8 @@ export function setupIframeBridge(
     if (area !== "local") return;
     if (!("vigogh-ai-button-enabled" in changes)) return;
     const enabled =
-      (changes["vigogh-ai-button-enabled"].newValue as boolean | undefined) ?? true;
+      (changes["vigogh-ai-button-enabled"].newValue as boolean | undefined) ??
+      true;
     try {
       iframe.contentWindow?.postMessage(
         { type: "VIGOGH_AI_BUTTON_ENABLED", enabled },
@@ -232,7 +233,9 @@ export function setupIframeBridge(
           })
           .catch(() => {});
         Promise.all([
-          chrome.storage.local.get<AiButtonAppearanceStorage>("vigogh-ai-button-appearance"),
+          chrome.storage.local.get<AiButtonAppearanceStorage>(
+            "vigogh-ai-button-appearance",
+          ),
           getThemesWithLabels(),
         ])
           .then(([stored, themes]) => {
@@ -420,7 +423,9 @@ export function setupIframeBridge(
       } else if (event.data?.type === "VIGOGH_GET_AI_BUTTON_APPEARANCE") {
         if (!isExtensionContextValid()) return;
         Promise.all([
-          chrome.storage.local.get<AiButtonAppearanceStorage>("vigogh-ai-button-appearance"),
+          chrome.storage.local.get<AiButtonAppearanceStorage>(
+            "vigogh-ai-button-appearance",
+          ),
           getThemesWithLabels(),
         ])
           .then(([stored, themes]) => {

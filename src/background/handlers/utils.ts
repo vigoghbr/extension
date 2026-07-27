@@ -5,14 +5,16 @@ export function toMatchArray(match: string | string[]): string[] {
 }
 
 export async function getSiteConfigs(): Promise<SiteConfig[]> {
-  const stored = await chrome.storage.local.get<{ "vigogh-settings"?: ExtensionSettings }>(
-    "vigogh-settings",
-  );
+  const stored = await chrome.storage.local.get<{
+    "vigogh-settings"?: ExtensionSettings;
+  }>("vigogh-settings");
   const config = stored["vigogh-settings"];
   return config?.sites ?? [];
 }
 
-export function findSiteConfig(sites: SiteConfig[], key: string): SiteConfig | undefined {
+export function findSiteConfig(
+  sites: SiteConfig[],
+  key: string,
+): SiteConfig | undefined {
   return sites.find((s) => s.key === key);
 }
-

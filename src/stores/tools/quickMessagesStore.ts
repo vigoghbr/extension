@@ -29,7 +29,10 @@ export function fetchQuickMessages(): void {
       });
     })
     .catch(() => {
-      quickMessagesStore.setState({ status: "error", error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "" });
+      quickMessagesStore.setState({
+        status: "error",
+        error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "",
+      });
     });
 }
 
@@ -49,13 +52,12 @@ export function createQuickMessage(text: string): Promise<void> {
     });
 }
 
-export function updateQuickMessage(
-  id: string,
-  text: string,
-): Promise<void> {
+export function updateQuickMessage(id: string, text: string): Promise<void> {
   quickMessagesStore.setState({ saveStatus: "loading" });
   return api
-    .patch<{ data: QuickMessage }>(getEndpoint("quickMessagesById", { id }), { text })
+    .patch<{ data: QuickMessage }>(getEndpoint("quickMessagesById", { id }), {
+      text,
+    })
     .then((res) => {
       quickMessagesStore.setState((s) => ({
         items: s.items.map((m) => (m.id === id ? res.data.data : m)),

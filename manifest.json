@@ -3,7 +3,13 @@
   "name": "Vigogh",
   "version": "2.0.10",
   "description": "Multiplique sua produtividade",
-  "permissions": ["sidePanel", "scripting", "storage", "clipboardWrite", "activeTab"],
+  "permissions": [
+    "sidePanel",
+    "scripting",
+    "storage",
+    "clipboardWrite",
+    "activeTab"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -19,12 +25,20 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
-"content_security_policy": {
+  "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
   "web_accessible_resources": [
     {
-      "resources": ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.gif", "*.webp", "*.ttf"],
+      "resources": [
+        "*.png",
+        "*.jpg",
+        "*.jpeg",
+        "*.svg",
+        "*.gif",
+        "*.webp",
+        "*.ttf"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

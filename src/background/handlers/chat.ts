@@ -1,7 +1,10 @@
-import api, { extractApiErrorCode, isUnauthorizedError } from "@/libs/api-dispatch";
+import type { BackgroundMessageHandler } from "@/background/handlers/types";
+import api, {
+  extractApiErrorCode,
+  isUnauthorizedError,
+} from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
 import type { ChatCreateResponse, ChatSendResponse } from "@/types";
-import type { BackgroundMessageHandler } from "@/background/handlers/types";
 
 async function handleChatCreate(): Promise<ChatCreateResponse> {
   try {
@@ -31,8 +34,15 @@ async function handleChatSend(
     if (pageMetadata) body.pageMetadata = pageMetadata;
     if (pageForms) body.pageForms = pageForms;
     if (pageURL) body.pageURL = pageURL;
-    const { data } = await api.post(getEndpoint("chatMessages", { chatId }), body);
-    return { success: true, response: data.data.response, toolUsageId: data.data.toolUsageId };
+    const { data } = await api.post(
+      getEndpoint("chatMessages", { chatId }),
+      body,
+    );
+    return {
+      success: true,
+      response: data.data.response,
+      toolUsageId: data.data.toolUsageId,
+    };
   } catch (error) {
     if (isUnauthorizedError(error)) return { success: false, noToken: true };
     const code = extractApiErrorCode(error);
@@ -41,7 +51,11 @@ async function handleChatSend(
   }
 }
 
-export const handleMessages: BackgroundMessageHandler = (message, _sender, sendResponse) => {
+export const handleMessages: BackgroundMessageHandler = (
+  message,
+  _sender,
+  sendResponse,
+) => {
   if (message.action === "chat_create") {
     handleChatCreate()
       .then(sendResponse)

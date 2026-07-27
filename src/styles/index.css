@@ -40,33 +40,60 @@
   --radius-3xl: 24px;
 }
 
-
 @keyframes vigogh-glass-float-a {
-  0%, 100% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(6px, -8px) scale(1.08); }
-  66% { transform: translate(-6px, 6px) scale(0.94); }
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(6px, -8px) scale(1.08);
+  }
+  66% {
+    transform: translate(-6px, 6px) scale(0.94);
+  }
 }
 
 @keyframes vigogh-glass-float-b {
-  0%, 100% { transform: translate(0px, 0px) scale(1); }
-  50% { transform: translate(8px, 6px) scale(0.92); }
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(8px, 6px) scale(0.92);
+  }
 }
 
 @keyframes vigogh-ai-button-shine {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 0%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes vigogh-ai-button-sweep {
-  0% { left: -150%; }
-  30% { left: 150%; }
-  100% { left: 150%; }
+  0% {
+    left: -150%;
+  }
+  30% {
+    left: 150%;
+  }
+  100% {
+    left: 150%;
+  }
 }
 
 @keyframes vigogh-ai-button-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #vigogh-ai-button {
@@ -77,7 +104,8 @@
     var(--ai-btn-c1, oklch(0.45 0.2 265)) 100%
   );
   background-size: 200% 200%;
-  animation: vigogh-ai-button-shine var(--ai-btn-shine-duration, 4s) ease infinite;
+  animation: vigogh-ai-button-shine var(--ai-btn-shine-duration, 4s) ease
+    infinite;
 }
 
 #vigogh-ai-button::after {
@@ -87,7 +115,12 @@
   left: -150%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to right, transparent, oklch(0.82 0.12 300 / 0.6), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.82 0.12 300 / 0.6),
+    transparent
+  );
   transform: skewX(-20deg);
   border-radius: var(--ai-btn-border-radius, 50%);
   opacity: 0;
@@ -105,8 +138,12 @@
 }
 
 @keyframes vigogh-ai-button-loading {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
 }
 
 #vigogh-ai-button.vigogh-ai-button-loading {
@@ -118,7 +155,8 @@
     var(--ai-btn-load-c1, oklch(0.65 0.3 300))
   );
   background-size: 300% 100%;
-  animation: vigogh-ai-button-loading var(--ai-btn-load-duration, 0.6s) linear infinite;
+  animation: vigogh-ai-button-loading var(--ai-btn-load-duration, 0.6s) linear
+    infinite;
 }
 
 #vigogh-ai-button.vigogh-ai-button-loading::after {
@@ -129,7 +167,9 @@
   position: relative;
   overflow: hidden;
   background: var(--shine-btn-bg);
-  transition: transform 0.08s ease, filter 0.15s ease;
+  transition:
+    transform 0.08s ease,
+    filter 0.15s ease;
 }
 
 .vigogh-shine-btn::after {
@@ -139,7 +179,12 @@
   left: -150%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to right, transparent, var(--shine-btn-sweep), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--shine-btn-sweep),
+    transparent
+  );
   transform: skewX(-20deg);
   opacity: 0;
   transition: opacity 0.2s;
@@ -167,7 +212,8 @@
 }
 
 *:hover {
-  scrollbar-color: color-mix(in oklch, var(--foreground) 65%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 65%, transparent)
+    transparent;
 }
 
 *::-webkit-scrollbar {

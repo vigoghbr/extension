@@ -25,7 +25,10 @@ export async function openSidePanelForTab(
 
 export async function openSidePanelFromActiveTab(): Promise<boolean> {
   try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const tabs = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
     const tab = tabs[0];
     return openSidePanelForTab(tab?.id, tab?.windowId);
   } catch {

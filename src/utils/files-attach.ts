@@ -1,9 +1,9 @@
-import { extensionStore } from "@/stores/extensionStore";
 import { toast } from "@/libs/toast";
+import { extensionStore } from "@/stores/extensionStore";
+import type { FilesFetchBlobResponse } from "@/types";
+import { isExtensionContextValid } from "@/utils/extension-context";
 import { attachFileToPage } from "@/utils/files-inject";
 import { sendBackgroundRequest } from "@/utils/runtime-request";
-import { isExtensionContextValid } from "@/utils/extension-context";
-import type { FilesFetchBlobResponse } from "@/types";
 
 export interface AttachableFile {
   id: string;
@@ -21,7 +21,8 @@ export function isAttachInProgress(): boolean {
 function base64ToBlob(base64: string, mimeType: string): Blob {
   const byteString = atob(base64);
   const bytes = new Uint8Array(byteString.length);
-  for (let i = 0; i < byteString.length; i++) bytes[i] = byteString.charCodeAt(i);
+  for (let i = 0; i < byteString.length; i++)
+    bytes[i] = byteString.charCodeAt(i);
   return new Blob([bytes], { type: mimeType });
 }
 
@@ -52,7 +53,8 @@ function fetchBlob(item: AttachableFile): Promise<Blob | null> {
 
 export async function triggerAttach(item: AttachableFile): Promise<void> {
   const config = extensionStore.getState().config;
-  attachSuppressUntil = Date.now() + (config?.behavior.filesAttachDragSuppressMs ?? 5000);
+  attachSuppressUntil =
+    Date.now() + (config?.behavior.filesAttachDragSuppressMs ?? 5000);
   const labels = config?.aiMenu.vigoghMenu;
 
   const loadingId = labels?.filesAttachLoading
@@ -69,7 +71,8 @@ export async function triggerAttach(item: AttachableFile): Promise<void> {
   const ok = await attachFileToPage(blob, item.originalFilename, item.mimeType);
   if (loadingId !== null) toast.dismiss(loadingId);
   if (ok) {
-    attachSuppressUntil = Date.now() + (config?.behavior.filesAttachSuccessSuppressMs ?? 2000);
+    attachSuppressUntil =
+      Date.now() + (config?.behavior.filesAttachSuccessSuppressMs ?? 2000);
     if (labels?.filesAttachSuccess) toast.success(labels.filesAttachSuccess);
     return;
   }

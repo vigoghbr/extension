@@ -1,6 +1,6 @@
-import type { ResolvedExtensionSettings, IndicatorType } from "@/types";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
+import type { IndicatorType, ResolvedExtensionSettings } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
 let pageIndicatorAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -12,7 +12,10 @@ function clearPageIndicatorAutoHide(): void {
   }
 }
 
-export function showIndicator(type: IndicatorType, config: ResolvedExtensionSettings): void {
+export function showIndicator(
+  type: IndicatorType,
+  config: ResolvedExtensionSettings,
+): void {
   if (type === "page") {
     showPageIndicator(config);
     clearPageIndicatorAutoHide();

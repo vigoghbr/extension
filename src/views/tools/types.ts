@@ -1,5 +1,5 @@
 import type React from "react";
-import type { ThemeColorSet, ResolvedAiMenuConfig } from "@/types";
+import type { ResolvedAiMenuConfig, ThemeColorSet } from "@/types";
 
 export interface PopoverProps {
   colors: ThemeColorSet;

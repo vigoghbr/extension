@@ -1,41 +1,46 @@
-import { logger, installGlobalHandlers } from "@/libs/logger";
 import { createRoot } from "react-dom/client";
+import { installGlobalHandlers, logger } from "@/libs/logger";
 
 installGlobalHandlers();
-import App from "@/views/App";
+
+import { initSessionCache } from "@/libs/auth";
+import { emitErrorToastr, emitNeutralToastr } from "@/libs/toast";
+import { aiMenuStore } from "@/stores/aiMenuStore";
 import {
   extensionStore,
+  getActiveStrategy,
+  getEditorSelector,
+  getGeneralInputSelector,
   loadConfig,
   setCurrentEditor,
   setEditorFocused,
-  getEditorSelector,
-  getGeneralInputSelector,
-  getActiveStrategy,
 } from "@/stores/extensionStore";
-import {
-  autocompleteStore,
-  scheduleCompletion,
-  acceptCompletion,
-  dismissCompletion,
-  clearSuppress,
-  setSiteEnabled,
-} from "@/stores/tools/autocompleteStore";
-import { setSelectedRange, setHasEditorText } from "@/stores/tools/toolsStore";
-import { aiMenuStore } from "@/stores/aiMenuStore";
 import { initIndicatorListener } from "@/stores/indicatorsStore";
-import { showIndicator, hideIndicator } from "@/utils/indicators";
+import {
+  acceptCompletion,
+  autocompleteStore,
+  clearSuppress,
+  dismissCompletion,
+  scheduleCompletion,
+} from "@/stores/tools/autocompleteStore";
+import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
+import {
+  type AttachableFile,
+  isAttachInProgress,
+  triggerAttach,
+} from "@/utils/files-attach";
+import { hideIndicator, showIndicator } from "@/utils/indicators";
 import { applyQuickMessage } from "@/utils/quick-message-apply";
-import { triggerAttach, isAttachInProgress, type AttachableFile } from "@/utils/files-attach";
-import { initSessionCache } from "@/libs/auth";
-import { emitErrorToastr, emitNeutralToastr } from "@/libs/toast";
+import App from "@/views/App";
 
 if (!(window as any).__vigoghInit) {
   (window as any).__vigoghInit = true;
 
   function mount(): void {
     const host = document.createElement("div");
-    host.style.cssText = "font-size: 16px; line-height: 1.5; font-family: sans-serif; color: initial;";
+    host.style.cssText =
+      "font-size: 16px; line-height: 1.5; font-family: sans-serif; color: initial;";
     const shadowRoot = host.attachShadow({ mode: "open" });
     document.body.appendChild(host);
 
@@ -63,14 +68,19 @@ if (!(window as any).__vigoghInit) {
   function notifyExtensionStatus(): void {
     const unsubscribe = extensionStore.subscribe((state, prev) => {
       if (state.aiMenuVisible && !prev.aiMenuVisible) {
-        emitNeutralToastr("AI_BUTTON_AVAILABLE", { id: "vigogh-ai-button-available" });
+        emitNeutralToastr("AI_BUTTON_AVAILABLE", {
+          id: "vigogh-ai-button-available",
+        });
         unsubscribe();
       }
     });
   }
 
   function getEditorText(editor: Element): string {
-    if (editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement) {
+    if (
+      editor instanceof HTMLInputElement ||
+      editor instanceof HTMLTextAreaElement
+    ) {
       return editor.value;
     }
     return editor.textContent ?? "";
@@ -91,7 +101,9 @@ if (!(window as any).__vigoghInit) {
       if (isAttachInProgress()) return;
       if (generalToastShown.has(editor)) return;
       generalToastShown.add(editor);
-      emitNeutralToastr("DEFAULT_STRATEGY_ACTIVATED", { id: "vigogh-default-strategy-activated" });
+      emitNeutralToastr("DEFAULT_STRATEGY_ACTIVATED", {
+        id: "vigogh-default-strategy-activated",
+      });
     }
 
     document.addEventListener(
@@ -102,7 +114,9 @@ if (!(window as any).__vigoghInit) {
 
         const siteSelector = getEditorSelector();
         if (siteSelector) {
-          const editor = target.matches(siteSelector) ? target : target.closest(siteSelector);
+          const editor = target.matches(siteSelector)
+            ? target
+            : target.closest(siteSelector);
           if (editor) {
             setCurrentEditor(editor);
             updateHasEditorText(editor);
@@ -112,7 +126,9 @@ if (!(window as any).__vigoghInit) {
 
         const generalSelector = getGeneralInputSelector();
         if (generalSelector) {
-          const editor = target.matches(generalSelector) ? target : target.closest(generalSelector);
+          const editor = target.matches(generalSelector)
+            ? target
+            : target.closest(generalSelector);
           if (editor) {
             setCurrentEditor(editor);
             updateHasEditorText(editor);
@@ -203,62 +219,74 @@ if (!(window as any).__vigoghInit) {
         const { currentEditor } = extensionStore.getState();
         if (!currentEditor) return;
         const selection = window.getSelection();
-        if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+        if (!selection || selection.isCollapsed || !selection.rangeCount)
+          return;
         if (!currentEditor.contains(selection.anchorNode)) return;
         const selectedText = selection.toString().trim();
         const { config } = extensionStore.getState();
         if (!config) return;
-        if (selectedText.length < (config.behavior.minSelectionLength ?? 0)) return;
+        if (selectedText.length < (config.behavior.minSelectionLength ?? 0))
+          return;
         setSelectedRange(selection.getRangeAt(0).cloneRange());
       },
       true,
     );
 
-    document.addEventListener("dragover", (e: DragEvent) => {
-      const types = e.dataTransfer?.types ?? [];
-      if (
-        types.includes("application/x-vigogh-text") ||
-        types.includes("application/x-vigogh-file") ||
-        types.includes("application/x-vigogh-quick-message")
-      ) {
-        e.preventDefault();
-      }
-    }, true);
-
-    document.addEventListener("drop", (e: DragEvent) => {
-      const fileData = e.dataTransfer?.getData("application/x-vigogh-file");
-      if (fileData) {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          const item = JSON.parse(fileData) as AttachableFile;
-          void triggerAttach(item);
-        } catch (error) {
-          console.log("files:drop:parse_error", error);
+    document.addEventListener(
+      "dragover",
+      (e: DragEvent) => {
+        const types = e.dataTransfer?.types ?? [];
+        if (
+          types.includes("application/x-vigogh-text") ||
+          types.includes("application/x-vigogh-file") ||
+          types.includes("application/x-vigogh-quick-message")
+        ) {
+          e.preventDefault();
         }
-        return;
-      }
-      const quickMessageText = e.dataTransfer?.getData("application/x-vigogh-quick-message");
-      if (quickMessageText) {
+      },
+      true,
+    );
+
+    document.addEventListener(
+      "drop",
+      (e: DragEvent) => {
+        const fileData = e.dataTransfer?.getData("application/x-vigogh-file");
+        if (fileData) {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            const item = JSON.parse(fileData) as AttachableFile;
+            void triggerAttach(item);
+          } catch (error) {
+            console.log("files:drop:parse_error", error);
+          }
+          return;
+        }
+        const quickMessageText = e.dataTransfer?.getData(
+          "application/x-vigogh-quick-message",
+        );
+        if (quickMessageText) {
+          e.preventDefault();
+          e.stopPropagation();
+          applyQuickMessage(quickMessageText);
+          return;
+        }
+        const text = e.dataTransfer?.getData("application/x-vigogh-text");
+        if (!text) return;
+        const { currentEditor } = extensionStore.getState();
+        if (!currentEditor) return;
+        if (!currentEditor.contains(e.target as Node)) return;
         e.preventDefault();
-        e.stopPropagation();
-        applyQuickMessage(quickMessageText);
-        return;
-      }
-      const text = e.dataTransfer?.getData("application/x-vigogh-text");
-      if (!text) return;
-      const { currentEditor } = extensionStore.getState();
-      if (!currentEditor) return;
-      if (!currentEditor.contains(e.target as Node)) return;
-      e.preventDefault();
-      const strategy = getActiveStrategy();
-      if (strategy) {
-        strategy.insertText(currentEditor as HTMLElement, text);
-      } else {
-        (currentEditor as HTMLElement).focus();
-        document.execCommand("insertText", false, text);
-      }
-    }, true);
+        const strategy = getActiveStrategy();
+        if (strategy) {
+          strategy.insertText(currentEditor as HTMLElement, text);
+        } else {
+          (currentEditor as HTMLElement).focus();
+          document.execCommand("insertText", false, text);
+        }
+      },
+      true,
+    );
 
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.action === "serious_error_toast") {

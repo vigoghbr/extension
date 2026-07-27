@@ -1,5 +1,5 @@
-import { initLogger, logger } from "@/libs/logger";
 import { SIDEPANEL_URL } from "@/libs/constants";
+import { initLogger, logger } from "@/libs/logger";
 import { setupIframeBridge } from "./bridge";
 
 initLogger("sidepanel");

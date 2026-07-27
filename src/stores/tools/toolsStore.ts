@@ -1,5 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import { logger } from "@/libs/logger";
+import { openPlansScreen } from "@/libs/sidepanel";
 import {
   emitErrorToastr,
   emitInfoToastr,
@@ -7,15 +8,19 @@ import {
   emitSuccessToastr,
   toast,
 } from "@/libs/toast";
-import type { ResolvedAnswerToolConfig, ToolResponse } from "@/types";
-import { extensionStore, getActiveStrategy, onEditorChange, resolveEditorWithStrategy } from "@/stores/extensionStore";
+import {
+  extensionStore,
+  getActiveStrategy,
+  onEditorChange,
+  resolveEditorWithStrategy,
+} from "@/stores/extensionStore";
+import { showPageIndicator } from "@/stores/indicatorsStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
+import type { ResolvedAnswerToolConfig, ToolResponse } from "@/types";
 import { applyTextToEditor } from "@/utils/apply-text";
 import { blobUrlToBase64 } from "@/utils/blob-to-base64";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired, requestLogin } from "@/utils/login-required";
-import { showPageIndicator } from "@/stores/indicatorsStore";
-import { openPlansScreen } from "@/libs/sidepanel";
 import { hasAuthToken, sendBackgroundRequest } from "@/utils/runtime-request";
 import { handleToolError } from "@/utils/tool-error";
 
@@ -41,11 +46,13 @@ export const toolsStore = createStore<AnswersState>()(() => ({
   toolUsageId: null,
 }));
 
-let selectedRange: Range | null = null;
 let pendingEditor: HTMLElement | null = null;
 let pendingApplyText: string | null = null;
 
-export function requestAnswers(itemId: string, directionOverride?: string): void {
+export function requestAnswers(
+  itemId: string,
+  directionOverride?: string,
+): void {
   if (!isExtensionContextValid()) return;
 
   const { config } = extensionStore.getState();
@@ -66,18 +73,22 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
   if (!config) return;
   const { editor, strategy } = resolveEditorWithStrategy();
 
-  const toolConfig = config.aiMenu.tools.find((t) => t.id === itemId) as ResolvedAnswerToolConfig | undefined;
+  const toolConfig = config.aiMenu.tools.find((t) => t.id === itemId) as
+    | ResolvedAnswerToolConfig
+    | undefined;
   const apiPath = toolConfig?.apiPath ?? "/v1/tools/answers";
 
   const text = editor && strategy ? strategy.getCurrentText(editor) : "";
-  const direction = directionOverride !== undefined
-    ? (directionOverride.trim() || undefined)
-    : (text.trim() || undefined);
+  const direction =
+    directionOverride !== undefined
+      ? directionOverride.trim() || undefined
+      : text.trim() || undefined;
   const url = window.location.href;
 
-  const messages = editor && strategy
-    ? strategy.getConversationContext(editor).map((m) => ({ ...m }))
-    : [];
+  const messages =
+    editor && strategy
+      ? strategy.getConversationContext(editor).map((m) => ({ ...m }))
+      : [];
 
   const mediaFields = ["image", "audio", "video", "file"] as const;
   const resolvedMessagesPromise = Promise.all(
@@ -89,7 +100,11 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
           try {
             result[field] = await blobUrlToBase64(value);
           } catch (error) {
-            logger.log("answers:blob-fetch-failed", { field, url: value, error: String(error) });
+            logger.log("answers:blob-fetch-failed", {
+              field,
+              url: value,
+              error: String(error),
+            });
           }
         }
       }
@@ -127,14 +142,22 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
           const code = response?.errorCode;
           if (code) {
             emitErrorToastr(code);
-            toolsStore.setState({ status: "error", activeItemId: null, errorCode: code });
+            toolsStore.setState({
+              status: "error",
+              activeItemId: null,
+              errorCode: code,
+            });
             if (code === "SUBSCRIPTION_REQUIRED") void openPlansScreen();
             return;
           }
           handleToolError();
           return;
         }
-        toolsStore.setState({ status: "success", suggestions: response.suggestions, toolUsageId: response.toolUsageId ?? null });
+        toolsStore.setState({
+          status: "success",
+          suggestions: response.suggestions,
+          toolUsageId: response.toolUsageId ?? null,
+        });
       },
       { onNoToken: () => toast.dismiss(toastId) },
     );
@@ -207,15 +230,20 @@ export function flushPendingAnswerApply(): void {
 onEditorChange(flushPendingAnswerApply);
 
 export function setSelectedRange(range: Range | null): void {
-  selectedRange = range;
-  toolsStore.setState({ hasSelectedText: range !== null && range.toString().trim().length > 0 });
+  toolsStore.setState({
+    hasSelectedText: range !== null && range.toString().trim().length > 0,
+  });
 }
 
 export function setHasEditorText(hasText: boolean): void {
   toolsStore.setState({ hasEditorText: hasText });
 }
 
-export function applyTransform(itemId: string, transformAction: string, autoApply?: boolean): void {
+export function applyTransform(
+  itemId: string,
+  transformAction: string,
+  autoApply?: boolean,
+): void {
   const { currentEditor, config } = extensionStore.getState();
   const editor = currentEditor as HTMLElement | null;
   if (!editor || !config || !isExtensionContextValid()) return;
@@ -233,7 +261,11 @@ export function applyTransform(itemId: string, transformAction: string, autoAppl
   sendBackgroundRequest<ToolResponse>(
     { action: "transforms_request", text: savedText, transformAction },
     (response) => {
-      if (chrome.runtime.lastError || !response?.success || !response.suggestions?.length) {
+      if (
+        chrome.runtime.lastError ||
+        !response?.success ||
+        !response.suggestions?.length
+      ) {
         handleToolError();
         return;
       }
@@ -243,7 +275,10 @@ export function applyTransform(itemId: string, transformAction: string, autoAppl
         if (!result) return;
         strategy?.replaceAllText(editor, result);
       } else {
-        toolsStore.setState({ status: "success", suggestions: response.suggestions });
+        toolsStore.setState({
+          status: "success",
+          suggestions: response.suggestions,
+        });
       }
     },
   );
@@ -261,7 +296,13 @@ export function acceptTransform(suggestion: string): void {
 
 export function clearAnswers(): void {
   pendingEditor = null;
-  toolsStore.setState({ status: "idle", suggestions: [], activeItemId: null, errorCode: null, toolUsageId: null });
+  toolsStore.setState({
+    status: "idle",
+    suggestions: [],
+    activeItemId: null,
+    errorCode: null,
+    toolUsageId: null,
+  });
 }
 
 onLoginRequired(clearAnswers);

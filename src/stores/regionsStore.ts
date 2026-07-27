@@ -28,8 +28,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   const update: Partial<RegionState> = {};
   if ("vigogh-region" in changes)
-    update.region = (changes["vigogh-region"].newValue as "us" | "br" | undefined) ?? "br";
+    update.region =
+      (changes["vigogh-region"].newValue as "us" | "br" | undefined) ?? "br";
   if ("vigogh-locales" in changes)
-    update.locales = (changes["vigogh-locales"].newValue as ExtensionLocales | undefined) ?? null;
+    update.locales =
+      (changes["vigogh-locales"].newValue as ExtensionLocales | undefined) ??
+      null;
   if (Object.keys(update).length > 0) regionsStore.setState(update);
 });

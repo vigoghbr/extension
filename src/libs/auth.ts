@@ -43,7 +43,9 @@ export async function exchangeRefreshToken(
 export async function refreshAuthToken(): Promise<string | null> {
   if (inflight) return inflight;
   inflight = (async () => {
-    const stored = await chrome.storage.local.get<AuthStorage>("vigogh-auth-refresh-token");
+    const stored = await chrome.storage.local.get<AuthStorage>(
+      "vigogh-auth-refresh-token",
+    );
     const refreshToken = stored["vigogh-auth-refresh-token"];
     if (!refreshToken) return null;
 
@@ -120,15 +122,20 @@ export async function initSessionCache(): Promise<void> {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
       if ("vigogh-auth-token" in changes) {
-        cache.token = (changes["vigogh-auth-token"].newValue as string | undefined) ?? null;
+        cache.token =
+          (changes["vigogh-auth-token"].newValue as string | undefined) ?? null;
       }
       if ("vigogh-auth-refresh-token" in changes) {
         cache.refreshToken =
-          (changes["vigogh-auth-refresh-token"].newValue as string | undefined) ?? null;
+          (changes["vigogh-auth-refresh-token"].newValue as
+            | string
+            | undefined) ?? null;
       }
       if ("vigogh-auth-token-expires-at" in changes) {
         cache.expiresAt =
-          (changes["vigogh-auth-token-expires-at"].newValue as number | undefined) ?? null;
+          (changes["vigogh-auth-token-expires-at"].newValue as
+            | number
+            | undefined) ?? null;
       }
     });
   }

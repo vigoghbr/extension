@@ -1,6 +1,13 @@
-import { extensionStore, setPageIndicatorActive } from "@/stores/extensionStore";
+import {
+  extensionStore,
+  setPageIndicatorActive,
+} from "@/stores/extensionStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
-import { showIndicator, hideIndicator, setBottomBorderLoading } from "@/utils/indicators";
+import {
+  hideIndicator,
+  setBottomBorderLoading,
+  showIndicator,
+} from "@/utils/indicators";
 
 export { initIndicatorListener } from "@/utils/indicators";
 

@@ -15,13 +15,17 @@ export function extractPageForms(doc: Document): PageFormField[] {
     const id = el.getAttribute("id") || el.getAttribute("name") || "";
     const label = id
       ? normalizeWhitespace(
-          doc.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent ?? "",
+          doc.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent ??
+            "",
         )
       : "";
     const placeholder = el.getAttribute("placeholder") || "";
     const type = el.getAttribute("type") || el.tagName.toLowerCase();
     const value = normalizeWhitespace(
-      String((el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value || ""),
+      String(
+        (el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)
+          .value || "",
+      ),
     );
 
     if (type === "hidden") return;

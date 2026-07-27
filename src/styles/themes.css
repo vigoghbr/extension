@@ -9,7 +9,8 @@
 
   --ai-btn-c1: oklch(0.45 0.2 265);
   --ai-btn-c2: oklch(0.45 0.27 300);
-  --ai-btn-shadow: 0 4px 16px rgba(124, 58, 237, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --ai-btn-shadow:
+    0 4px 16px rgba(124, 58, 237, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
   --ai-menu-bg: rgba(12, 12, 18, 0.75);
   --ai-menu-border: rgba(124, 58, 237, 0.4);
   --ai-item-hover-bg: rgba(124, 58, 237, 0.25);
@@ -22,24 +23,27 @@
   --ai-load-c1: oklch(0.65 0.3 300);
   --ai-load-c2: oklch(0.65 0.3 230);
   --ai-load-c3: oklch(0.7 0.28 270);
-  --ai-container-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(124, 58, 237, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --ai-container-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(124, 58, 237, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
   --ai-close-btn: rgba(255, 255, 255, 0.4);
   --ai-divider: rgba(255, 255, 255, 0.08);
   --ai-text: rgba(255, 255, 255, 0.85);
 }
 
 :host([data-theme="ocean"]) {
-  --primary: oklch(0.55 0.20 250);
+  --primary: oklch(0.55 0.2 250);
   --primary-foreground: oklch(0.98 0 0);
   --ai-btn-c1: oklch(0.55 0.18 250);
   --ai-btn-c2: oklch(0.45 0.18 265);
-  --ai-btn-shadow: 0 4px 24px rgba(50, 100, 220, 0.5), 0 0 0 1px rgba(50, 100, 220, 0.2);
+  --ai-btn-shadow:
+    0 4px 24px rgba(50, 100, 220, 0.5), 0 0 0 1px rgba(50, 100, 220, 0.2);
   --ai-menu-bg: rgba(8, 15, 35, 0.88);
   --ai-menu-border: rgba(50, 100, 220, 0.22);
   --ai-item-hover-bg: rgba(50, 100, 220, 0.12);
   --ai-toggle-on-bg: rgba(50, 100, 220, 0.18);
   --ai-toggle-on-border: rgba(50, 100, 220, 0.4);
-  --ai-toggle-on-color: oklch(0.82 0.10 250);
+  --ai-toggle-on-color: oklch(0.82 0.1 250);
   --ai-toggle-off-bg: rgba(255, 255, 255, 0.05);
   --ai-toggle-off-border: rgba(255, 255, 255, 0.12);
   --ai-toggle-off-color: rgba(255, 255, 255, 0.45);
@@ -53,7 +57,8 @@
   --primary-foreground: oklch(0.98 0 0);
   --ai-btn-c1: oklch(0.55 0.18 295);
   --ai-btn-c2: oklch(0.45 0.18 305);
-  --ai-btn-shadow: 0 4px 24px rgba(140, 60, 220, 0.5), 0 0 0 1px rgba(140, 60, 220, 0.2);
+  --ai-btn-shadow:
+    0 4px 24px rgba(140, 60, 220, 0.5), 0 0 0 1px rgba(140, 60, 220, 0.2);
   --ai-menu-bg: rgba(18, 10, 32, 0.88);
   --ai-menu-border: rgba(140, 60, 220, 0.22);
   --ai-item-hover-bg: rgba(140, 60, 220, 0.12);
@@ -65,15 +70,16 @@
   --ai-toggle-off-color: rgba(255, 255, 255, 0.45);
   --ai-load-c1: oklch(0.72 0.18 295);
   --ai-load-c2: oklch(0.55 0.18 305);
-  --ai-load-c3: oklch(0.68 0.20 280);
+  --ai-load-c3: oklch(0.68 0.2 280);
 }
 
 :host([data-theme="prata"]) {
   --primary: oklch(0.65 0.001 290);
   --primary-foreground: oklch(0.98 0 0);
-  --ai-btn-c1: oklch(0.80 0.001 290);
+  --ai-btn-c1: oklch(0.8 0.001 290);
   --ai-btn-c2: oklch(0.62 0.001 290);
-  --ai-btn-shadow: 0 4px 24px rgba(242, 242, 243, 0.5), 0 0 0 1px rgba(242, 242, 243, 0.2);
+  --ai-btn-shadow:
+    0 4px 24px rgba(242, 242, 243, 0.5), 0 0 0 1px rgba(242, 242, 243, 0.2);
   --ai-menu-bg: rgba(12, 14, 20, 0.88);
   --ai-menu-border: rgba(242, 242, 243, 0.22);
   --ai-item-hover-bg: rgba(242, 242, 243, 0.12);
@@ -84,7 +90,7 @@
   --ai-toggle-off-border: rgba(255, 255, 255, 0.12);
   --ai-toggle-off-color: rgba(255, 255, 255, 0.45);
   --ai-load-c1: oklch(0.85 0.001 290);
-  --ai-load-c2: oklch(0.70 0.001 290);
+  --ai-load-c2: oklch(0.7 0.001 290);
   --ai-load-c3: oklch(0.78 0.001 280);
 }
 
@@ -93,7 +99,8 @@
   --primary-foreground: oklch(0.98 0 0);
   --ai-btn-c1: oklch(0.55 0.15 162);
   --ai-btn-c2: oklch(0.48 0.13 175);
-  --ai-btn-shadow: 0 4px 24px rgba(30, 160, 120, 0.5), 0 0 0 1px rgba(30, 160, 120, 0.2);
+  --ai-btn-shadow:
+    0 4px 24px rgba(30, 160, 120, 0.5), 0 0 0 1px rgba(30, 160, 120, 0.2);
   --ai-menu-bg: rgba(8, 25, 20, 0.88);
   --ai-menu-border: rgba(30, 160, 120, 0.22);
   --ai-item-hover-bg: rgba(30, 160, 120, 0.12);
@@ -104,16 +111,17 @@
   --ai-toggle-off-border: rgba(255, 255, 255, 0.12);
   --ai-toggle-off-color: rgba(255, 255, 255, 0.45);
   --ai-load-c1: oklch(0.72 0.15 162);
-  --ai-load-c2: oklch(0.60 0.13 175);
-  --ai-load-c3: oklch(0.70 0.15 148);
+  --ai-load-c2: oklch(0.6 0.13 175);
+  --ai-load-c3: oklch(0.7 0.15 148);
 }
 
 :host([data-theme="cherry"]) {
   --primary: oklch(0.55 0.22 5);
   --primary-foreground: oklch(0.98 0 0);
   --ai-btn-c1: oklch(0.55 0.22 5);
-  --ai-btn-c2: oklch(0.45 0.20 15);
-  --ai-btn-shadow: 0 4px 24px rgba(220, 50, 90, 0.5), 0 0 0 1px rgba(220, 50, 90, 0.2);
+  --ai-btn-c2: oklch(0.45 0.2 15);
+  --ai-btn-shadow:
+    0 4px 24px rgba(220, 50, 90, 0.5), 0 0 0 1px rgba(220, 50, 90, 0.2);
   --ai-menu-bg: rgba(28, 8, 15, 0.88);
   --ai-menu-border: rgba(220, 50, 90, 0.22);
   --ai-item-hover-bg: rgba(220, 50, 90, 0.12);
@@ -124,6 +132,6 @@
   --ai-toggle-off-border: rgba(255, 255, 255, 0.12);
   --ai-toggle-off-color: rgba(255, 255, 255, 0.45);
   --ai-load-c1: oklch(0.72 0.22 5);
-  --ai-load-c2: oklch(0.55 0.20 15);
+  --ai-load-c2: oklch(0.55 0.2 15);
   --ai-load-c3: oklch(0.68 0.22 350);
 }

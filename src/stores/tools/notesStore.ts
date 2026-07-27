@@ -27,7 +27,10 @@ export function fetchNotes(): void {
       notesStore.setState({ items: res.data.data.notes, status: "success" });
     })
     .catch(() => {
-      notesStore.setState({ status: "error", error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "" });
+      notesStore.setState({
+        status: "error",
+        error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "",
+      });
     });
 }
 
@@ -68,11 +71,9 @@ export function deleteNote(id: string): void {
   const previous = notesStore.getState().items;
   hideStickyNote(id);
   notesStore.setState((s) => ({ items: s.items.filter((n) => n.id !== id) }));
-  api
-    .delete(getEndpoint("notesById", { id }))
-    .catch(() => {
-      notesStore.setState({ items: previous });
-    });
+  api.delete(getEndpoint("notesById", { id })).catch(() => {
+    notesStore.setState({ items: previous });
+  });
 }
 
 export function createEmptyNote(): Promise<Note | null> {
@@ -90,7 +91,9 @@ export function toggleNoteAI(id: string): void {
     ),
   });
   api
-    .patch<{ data: Note }>(getEndpoint("notesById", { id }), { disabledForAI: nextDisabled })
+    .patch<{ data: Note }>(getEndpoint("notesById", { id }), {
+      disabledForAI: nextDisabled,
+    })
     .then((res) => {
       notesStore.setState((s) => ({
         items: s.items.map((n) => (n.id === id ? res.data.data : n)),

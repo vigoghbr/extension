@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { useStore } from "zustand";
 import { Loader, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useStore } from "zustand";
 import { useDraggable } from "@/hooks/useDraggable";
-import { useResizable, type ResizeEdge } from "@/hooks/useResizable";
+import { type ResizeEdge, useResizable } from "@/hooks/useResizable";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
-import { resolveZIndex } from "@/utils/z-index";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
 import type { ThemeColorSet } from "@/types";
+import { resolveZIndex } from "@/utils/z-index";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 export interface WindowAction {
   icon: ReactNode;
@@ -46,21 +46,84 @@ export interface WindowProps {
   unfocusedOpacity?: number;
   onPositionEnd?: (pos: { bottom: number; right: number }) => void;
   onSizeEnd?: (size: { width: number; height: number }) => void;
-  children: ReactNode | ((state: { isFocused: boolean; isHovered: boolean }) => ReactNode);
+  children:
+    | ReactNode
+    | ((state: { isFocused: boolean; isHovered: boolean }) => ReactNode);
 }
 
 const ALL_EDGES: ResizeEdge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
-function buildEdgeStyles(handleSize: number): Record<ResizeEdge, { style: React.CSSProperties; cursor: string }> {
+function buildEdgeStyles(
+  handleSize: number,
+): Record<ResizeEdge, { style: React.CSSProperties; cursor: string }> {
   return {
-    n: { style: { top: 0, left: handleSize, right: handleSize, height: handleSize }, cursor: "ns-resize" },
-    s: { style: { bottom: 0, left: handleSize, right: handleSize, height: handleSize }, cursor: "ns-resize" },
-    e: { style: { right: 0, top: handleSize, bottom: handleSize, width: handleSize }, cursor: "ew-resize" },
-    w: { style: { left: 0, top: handleSize, bottom: handleSize, width: handleSize }, cursor: "ew-resize" },
-    ne: { style: { top: 0, right: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nesw-resize" },
-    nw: { style: { top: 0, left: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nwse-resize" },
-    se: { style: { bottom: 0, right: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nwse-resize" },
-    sw: { style: { bottom: 0, left: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nesw-resize" },
+    n: {
+      style: {
+        top: 0,
+        left: handleSize,
+        right: handleSize,
+        height: handleSize,
+      },
+      cursor: "ns-resize",
+    },
+    s: {
+      style: {
+        bottom: 0,
+        left: handleSize,
+        right: handleSize,
+        height: handleSize,
+      },
+      cursor: "ns-resize",
+    },
+    e: {
+      style: {
+        right: 0,
+        top: handleSize,
+        bottom: handleSize,
+        width: handleSize,
+      },
+      cursor: "ew-resize",
+    },
+    w: {
+      style: {
+        left: 0,
+        top: handleSize,
+        bottom: handleSize,
+        width: handleSize,
+      },
+      cursor: "ew-resize",
+    },
+    ne: {
+      style: {
+        top: 0,
+        right: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nesw-resize",
+    },
+    nw: {
+      style: { top: 0, left: 0, width: handleSize * 2, height: handleSize * 2 },
+      cursor: "nwse-resize",
+    },
+    se: {
+      style: {
+        bottom: 0,
+        right: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nwse-resize",
+    },
+    sw: {
+      style: {
+        bottom: 0,
+        left: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nesw-resize",
+    },
   };
 }
 
@@ -97,12 +160,19 @@ export function Window(props: WindowProps) {
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragLabel = useStore(extensionStore, (s) => s.config?.messages.info.DRAG_LABEL);
-  const closeLabel = useStore(extensionStore, (s) => s.config?.messages.info.CLOSE_LABEL);
+  const dragLabel = useStore(
+    extensionStore,
+    (s) => s.config?.messages.info.DRAG_LABEL,
+  );
+  const closeLabel = useStore(
+    extensionStore,
+    (s) => s.config?.messages.info.CLOSE_LABEL,
+  );
   const windowStyles = useStore(stylesStore, (s) => s.styles?.window);
   const zLayers = useStore(stylesStore, (s) => s.styles?.zLayers);
   const handleSize = windowStyles?.handleSize ?? 6;
-  const effectiveBorderRadius = borderRadius ?? windowStyles?.borderRadius ?? "12px";
+  const effectiveBorderRadius =
+    borderRadius ?? windowStyles?.borderRadius ?? "12px";
   const edgeStyles = buildEdgeStyles(handleSize);
   const [isFocused, setIsFocused] = useState(initialFocused);
   const [isHovered, setIsHovered] = useState(false);
@@ -111,19 +181,29 @@ export function Window(props: WindowProps) {
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       const path = e.composedPath();
-      const inside = containerRef.current && path.includes(containerRef.current);
+      const inside =
+        containerRef.current && path.includes(containerRef.current);
       setIsFocused(!!inside);
     };
     document.addEventListener("mousedown", handleMouseDown, true);
-    return () => document.removeEventListener("mousedown", handleMouseDown, true);
+    return () =>
+      document.removeEventListener("mousedown", handleMouseDown, true);
   }, []);
 
   const estW = initialWidth ?? minWidth;
   const estH = initialHeight ?? minHeight;
   const initialTop = window.innerHeight - bottom - estH;
   const initialLeft = window.innerWidth - right - estW;
-  const dragMargin = useStore(extensionStore, (s) => s.config?.behavior.windowDragMarginPx);
-  const { pos, setPos, onHeaderMouseDown } = useDraggable(containerRef, initialTop, initialLeft, dragMargin);
+  const dragMargin = useStore(
+    extensionStore,
+    (s) => s.config?.behavior.windowDragMarginPx,
+  );
+  const { pos, setPos, onHeaderMouseDown } = useDraggable(
+    containerRef,
+    initialTop,
+    initialLeft,
+    dragMargin,
+  );
   const { size, onMouseDownEdge } = useResizable(containerRef, {
     minWidth,
     minHeight,
@@ -137,7 +217,9 @@ export function Window(props: WindowProps) {
 
   const buttonStyle: React.CSSProperties = { padding: 0 };
   if (headerTextColor) buttonStyle.color = headerTextColor;
-  const titleStyle: React.CSSProperties = headerTextColor ? { color: headerTextColor } : {};
+  const titleStyle: React.CSSProperties = headerTextColor
+    ? { color: headerTextColor }
+    : {};
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
     onHeaderMouseDown(e);
@@ -164,15 +246,18 @@ export function Window(props: WindowProps) {
       if (!el) return;
       const rect = el.getBoundingClientRect();
       if (onSizeEnd) onSizeEnd({ width: rect.width, height: rect.height });
-      if (onPositionEnd) onPositionEnd({
-        bottom: window.innerHeight - rect.top - rect.height,
-        right: window.innerWidth - rect.left - rect.width,
-      });
+      if (onPositionEnd)
+        onPositionEnd({
+          bottom: window.innerHeight - rect.top - rect.height,
+          right: window.innerWidth - rect.left - rect.width,
+        });
     };
     document.addEventListener("mouseup", onUp, true);
   };
 
-  const headerStyle: React.CSSProperties = headerBackground ? { background: headerBackground } : {};
+  const headerStyle: React.CSSProperties = headerBackground
+    ? { background: headerBackground }
+    : {};
   const headerInner = (
     <div
       className={`flex items-center gap-2 px-3 pt-3 pb-2 select-none ${draggable ? "cursor-grab" : ""}`}
@@ -203,7 +288,11 @@ export function Window(props: WindowProps) {
                 if (!action.loading) action.onClick();
               }}
             >
-              {action.loading ? <Loader size={13} className="animate-spin" /> : action.icon}
+              {action.loading ? (
+                <Loader size={13} className="animate-spin" />
+              ) : (
+                action.icon
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent>{action.tooltip}</TooltipContent>
@@ -215,7 +304,10 @@ export function Window(props: WindowProps) {
             <button
               type="button"
               className="flex items-center justify-center w-6 h-6 rounded bg-transparent cursor-pointer border-none"
-              style={{ ...buttonStyle, color: closeIconColor ?? buttonStyle.color ?? "#fff" }}
+              style={{
+                ...buttonStyle,
+                color: closeIconColor ?? buttonStyle.color ?? "#fff",
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -247,15 +339,21 @@ export function Window(props: WindowProps) {
         left: `${pos.left}px`,
         background: bodyBackground ?? colors.menuBackground,
         border: `1px solid ${colors.menuBorderColor}`,
-        borderRadius: typeof effectiveBorderRadius === "number" ? `${effectiveBorderRadius}px` : effectiveBorderRadius,
+        borderRadius:
+          typeof effectiveBorderRadius === "number"
+            ? `${effectiveBorderRadius}px`
+            : effectiveBorderRadius,
         boxShadow: colors.containerShadow,
         minWidth: `${minWidth}px`,
         minHeight: `${minHeight}px`,
         maxWidth: maxWidth ? `${maxWidth}px` : undefined,
         width: size ? `${size.width}px` : undefined,
         height: size?.height != null ? `${size.height}px` : undefined,
-        opacity: (isFocused || isHovered) ? 1 : (unfocusedOpacity ?? 0.45),
-        transition: (isFocused || isHovered) ? "none" : `opacity ${windowStyles?.transitionMs ?? 200}ms ease`,
+        opacity: isFocused || isHovered ? 1 : (unfocusedOpacity ?? 0.45),
+        transition:
+          isFocused || isHovered
+            ? "none"
+            : `opacity ${windowStyles?.transitionMs ?? 200}ms ease`,
       }}
       {...dataAttrs}
     >
@@ -271,7 +369,9 @@ export function Window(props: WindowProps) {
       {showDivider && <div className="h-px bg-border mx-0" />}
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {typeof children === "function" ? children({ isFocused, isHovered }) : children}
+        {typeof children === "function"
+          ? children({ isFocused, isHovered })
+          : children}
       </div>
 
       {disclaimer && (
@@ -285,7 +385,11 @@ export function Window(props: WindowProps) {
           <div
             key={edge}
             className="absolute"
-            style={{ ...edgeStyles[edge].style, cursor: edgeStyles[edge].cursor, zIndex: 1 }}
+            style={{
+              ...edgeStyles[edge].style,
+              cursor: edgeStyles[edge].cursor,
+              zIndex: 1,
+            }}
             onMouseDown={handleEdgeMouseDown(edge)}
           />
         ))}

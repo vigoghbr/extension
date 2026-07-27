@@ -1,5 +1,5 @@
-import { useLayoutEffect, useState } from "react";
 import type { RefObject } from "react";
+import { useLayoutEffect, useState } from "react";
 
 export const MARGIN = 20;
 
@@ -26,7 +26,10 @@ export function useDraggable(
   initialLeft: number,
   margin: number = MARGIN,
 ) {
-  const [pos, setPos] = useState<Position>({ top: initialTop, left: initialLeft });
+  const [pos, setPos] = useState<Position>({
+    top: initialTop,
+    left: initialLeft,
+  });
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -62,7 +65,15 @@ export function useDraggable(
     const onMove = (ev: MouseEvent) => {
       const pw = el.offsetWidth;
       const ph = el.offsetHeight;
-      setPos(clampToViewport(ev.clientY - offsetY, ev.clientX - offsetX, pw, ph, margin));
+      setPos(
+        clampToViewport(
+          ev.clientY - offsetY,
+          ev.clientX - offsetX,
+          pw,
+          ph,
+          margin,
+        ),
+      );
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove, true);

@@ -19,8 +19,14 @@ export const stickyNotesStore = createStore<StickyNotesState>()(() => ({
 export function loadStickyState(): void {
   chrome.storage.local
     .get<{
-      "vigogh-sticky-notes-positions"?: Record<string, { top: number; left: number }>;
-      "vigogh-sticky-notes-sizes"?: Record<string, { width: number; height: number }>;
+      "vigogh-sticky-notes-positions"?: Record<
+        string,
+        { top: number; left: number }
+      >;
+      "vigogh-sticky-notes-sizes"?: Record<
+        string,
+        { width: number; height: number }
+      >;
     }>(["vigogh-sticky-notes-positions", "vigogh-sticky-notes-sizes"])
     .then((stored) => {
       const rawPositions = stored["vigogh-sticky-notes-positions"] ?? {};
@@ -61,16 +67,26 @@ export function toggleStickyNote(id: string): void {
   }
 }
 
-export function saveStickyPosition(id: string, pos: { top: number; left: number }): void {
+export function saveStickyPosition(
+  id: string,
+  pos: { top: number; left: number },
+): void {
   const next = { ...stickyNotesStore.getState().positions, [id]: pos };
   stickyNotesStore.setState({ positions: next });
-  chrome.storage.local.set({ "vigogh-sticky-notes-positions": next }).catch(() => {});
+  chrome.storage.local
+    .set({ "vigogh-sticky-notes-positions": next })
+    .catch(() => {});
 }
 
-export function saveStickySize(id: string, size: { width: number; height: number }): void {
+export function saveStickySize(
+  id: string,
+  size: { width: number; height: number },
+): void {
   const next = { ...stickyNotesStore.getState().sizes, [id]: size };
   stickyNotesStore.setState({ sizes: next });
-  chrome.storage.local.set({ "vigogh-sticky-notes-sizes": next }).catch(() => {});
+  chrome.storage.local
+    .set({ "vigogh-sticky-notes-sizes": next })
+    .catch(() => {});
 }
 
 export function setGroupFocused(focused: boolean): void {

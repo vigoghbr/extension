@@ -1,10 +1,10 @@
 import { createStore } from "zustand/vanilla";
 import { emitErrorToastr } from "@/libs/toast";
+import type { ChatCreateResponse, ChatSendResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired } from "@/utils/login-required";
 import { sendBackgroundRequest } from "@/utils/runtime-request";
 import { handleToolError } from "@/utils/tool-error";
-import type { ChatCreateResponse, ChatSendResponse } from "@/types";
 
 export interface ChatMessage {
   id: string;
@@ -58,8 +58,16 @@ export function sendChatMessage(text: string): void {
   const { status, messages, chatId } = chatStore.getState();
   if (status === "loading") return;
 
-  const userMessage: ChatMessage = { id: String(++nextId), role: "user", text: trimmed };
-  chatStore.setState((s) => ({ messages: [...s.messages, userMessage], status: "loading", errorCode: null }));
+  const userMessage: ChatMessage = {
+    id: String(++nextId),
+    role: "user",
+    text: trimmed,
+  };
+  chatStore.setState((s) => ({
+    messages: [...s.messages, userMessage],
+    status: "loading",
+    errorCode: null,
+  }));
 
   const isFirstMessage = messages.length === 0;
   const proceed = () => {
@@ -96,7 +104,8 @@ export function sendChatMessage(text: string): void {
           res.data?.pageForms ?? "",
           window.location.href,
         );
-        if (res.data?.pageScreenshot) setPageScreenshot(res.data.pageScreenshot);
+        if (res.data?.pageScreenshot)
+          setPageScreenshot(res.data.pageScreenshot);
         proceed();
       },
     );
@@ -106,7 +115,9 @@ export function sendChatMessage(text: string): void {
 }
 
 function createAndSend(trimmed: string): void {
-  sendBackgroundRequest<ChatCreateResponse>({ action: "chat_create" }, (createRes) => {
+  sendBackgroundRequest<ChatCreateResponse>(
+    { action: "chat_create" },
+    (createRes) => {
       if (chrome.runtime.lastError || !createRes?.success) {
         const code = createRes?.errorCode;
         if (code) {
@@ -120,7 +131,8 @@ function createAndSend(trimmed: string): void {
       const newChatId = createRes.chatId!;
       chatStore.setState({ chatId: newChatId });
       doSend(newChatId, trimmed);
-    });
+    },
+  );
 }
 
 function doSend(chatId: string, message: string): void {
@@ -150,8 +162,15 @@ function doSend(chatId: string, message: string): void {
         handleToolError();
         return;
       }
-      const botMessage: ChatMessage = { id: String(++nextId), role: "bot", text: sendRes.response ?? "" };
-      chatStore.setState((s) => ({ messages: [...s.messages, botMessage], status: "idle" }));
+      const botMessage: ChatMessage = {
+        id: String(++nextId),
+        role: "bot",
+        text: sendRes.response ?? "",
+      };
+      chatStore.setState((s) => ({
+        messages: [...s.messages, botMessage],
+        status: "idle",
+      }));
     },
   );
 }

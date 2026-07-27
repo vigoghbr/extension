@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
-import { Window, type WindowAction } from "@/views/Window";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
-import { applyQuickMessage } from "@/utils/quick-message-apply";
 import {
   createQuickMessage,
   deleteQuickMessage,
@@ -14,20 +11,40 @@ import {
   updateQuickMessage,
 } from "@/stores/tools/quickMessagesStore";
 import type { QuickMessage, ThemeColorSet } from "@/types";
+import { applyQuickMessage } from "@/utils/quick-message-apply";
 import type { PopoverProps } from "@/views/tools/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
+import { Window, type WindowAction } from "@/views/Window";
 
 type View = "list" | "create" | "edit";
 
-export function MessagesPopover({ colors, label, bottom, right, onClose }: PopoverProps) {
+export function MessagesPopover({
+  colors,
+  label,
+  bottom,
+  right,
+  onClose,
+}: PopoverProps) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [view, setView] = useState<View>("list");
-  const [editingMessage, setEditingMessage] = useState<QuickMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<QuickMessage | null>(
+    null,
+  );
 
   const items = useStore(quickMessagesStore, (s) => s.items);
   const status = useStore(quickMessagesStore, (s) => s.status);
-  const attachHint = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.messagesAttachHint ?? "");
-  const newTooltip = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.messagesNewTooltip ?? "");
-  const emptyLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.messagesEmpty ?? "");
+  const attachHint = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.messagesAttachHint ?? "",
+  );
+  const newTooltip = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.messagesNewTooltip ?? "",
+  );
+  const emptyLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.messagesEmpty ?? "",
+  );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.messages);
 
   useEffect(() => {
@@ -95,7 +112,10 @@ export function MessagesPopover({ colors, label, bottom, right, onClose }: Popov
           colors={colors}
           initialText={editingMessage.text}
           editingId={editingMessage.id}
-          onCancel={() => { setEditingMessage(null); setView("list"); }}
+          onCancel={() => {
+            setEditingMessage(null);
+            setView("list");
+          }}
           onSave={handleSaved}
         />
       )}
@@ -116,7 +136,18 @@ interface ListViewProps {
   onDelete: (id: string) => void;
 }
 
-function ListView({ items, status, emptyLabel, dragging, hoverBg, onDragStart, onDragEnd, onInsert, onEdit, onDelete }: ListViewProps) {
+function ListView({
+  items,
+  status,
+  emptyLabel,
+  dragging,
+  hoverBg,
+  onDragStart,
+  onDragEnd,
+  onInsert,
+  onEdit,
+  onDelete,
+}: ListViewProps) {
   if (status === "loading") {
     return (
       <div className="py-4 px-3 flex flex-col gap-2">
@@ -165,10 +196,25 @@ interface MessageItemProps {
   onDelete: () => void;
 }
 
-function MessageItem({ message, isDragging, hoverBg, onDragStart, onDragEnd, onInsert, onEdit, onDelete }: MessageItemProps) {
+function MessageItem({
+  message,
+  isDragging,
+  hoverBg,
+  onDragStart,
+  onDragEnd,
+  onInsert,
+  onEdit,
+  onDelete,
+}: MessageItemProps) {
   const [hovered, setHovered] = useState(false);
-  const editLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.editTooltip ?? "");
-  const deleteLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "");
+  const editLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.editTooltip ?? "",
+  );
+  const deleteLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "",
+  );
 
   return (
     <div
@@ -183,16 +229,27 @@ function MessageItem({ message, isDragging, hoverBg, onDragStart, onDragEnd, onI
       onMouseLeave={() => setHovered(false)}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", message.text);
-        e.dataTransfer.setData("application/x-vigogh-quick-message", message.text);
+        e.dataTransfer.setData(
+          "application/x-vigogh-quick-message",
+          message.text,
+        );
         e.dataTransfer.effectAllowed = "copy";
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      onMouseDown={(e) => { e.stopPropagation(); }}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onInsert(); }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onInsert();
+      }}
     >
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="text-sm text-white/85 leading-snug line-clamp-2">{message.text}</span>
+        <span className="text-sm text-white/85 leading-snug line-clamp-2">
+          {message.text}
+        </span>
       </div>
       {hovered && (
         <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
@@ -201,7 +258,11 @@ function MessageItem({ message, isDragging, hoverBg, onDragStart, onDragEnd, onI
               <button
                 className="flex items-center justify-center w-5 h-5 rounded bg-transparent text-white hover:text-white cursor-pointer border-none"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit();
+                }}
               >
                 <Pencil size={11} />
               </button>
@@ -213,7 +274,11 @@ function MessageItem({ message, isDragging, hoverBg, onDragStart, onDragEnd, onI
               <button
                 className="flex items-center justify-center w-5 h-5 rounded bg-transparent text-white hover:text-red-400 cursor-pointer border-none"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
               >
                 <Trash2 size={11} />
               </button>
@@ -234,7 +299,13 @@ interface MessageFormProps {
   onSave: () => void;
 }
 
-function MessageForm({ colors, initialText = "", editingId, onCancel, onSave }: MessageFormProps) {
+function MessageForm({
+  colors,
+  initialText = "",
+  editingId,
+  onCancel,
+  onSave,
+}: MessageFormProps) {
   const [text, setText] = useState(initialText);
   const saveStatus = useStore(quickMessagesStore, (s) => s.saveStatus);
   const saving = saveStatus === "loading";
@@ -242,11 +313,26 @@ function MessageForm({ colors, initialText = "", editingId, onCancel, onSave }: 
     extensionStore,
     (s) => s.config!.aiMenu.quickMessages.maxLength,
   );
-  const placeholder = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.messagesPlaceholder ?? "");
-  const cancelLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.cancelLabel ?? "");
-  const saveLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.saveLabel ?? "");
-  const savingLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.savingLabel ?? "");
-  const messagesPopoverStyles = useStore(stylesStore, (s) => s.styles?.messagesPopover);
+  const placeholder = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.messagesPlaceholder ?? "",
+  );
+  const cancelLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.cancelLabel ?? "",
+  );
+  const saveLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.saveLabel ?? "",
+  );
+  const savingLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.savingLabel ?? "",
+  );
+  const messagesPopoverStyles = useStore(
+    stylesStore,
+    (s) => s.styles?.messagesPopover,
+  );
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -289,9 +375,19 @@ function MessageForm({ colors, initialText = "", editingId, onCancel, onSave }: 
       <div className="flex gap-2">
         <button
           className="flex-1 py-1.5 rounded-md text-xs font-medium text-white/60 cursor-pointer border-none"
-          style={{ background: messagesPopoverStyles?.cancelButtonBackground ?? "transparent" }}
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
+          style={{
+            background:
+              messagesPopoverStyles?.cancelButtonBackground ?? "transparent",
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onCancel();
+          }}
         >
           {cancelLabel}
         </button>
@@ -299,7 +395,10 @@ function MessageForm({ colors, initialText = "", editingId, onCancel, onSave }: 
           className="flex-1 py-1.5 rounded-md text-xs font-medium text-white cursor-pointer border-none disabled:opacity-50"
           style={{ background: "var(--shine-btn-sweep)" }}
           disabled={!text.trim() || saving}
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={handleSave}
         >
           {saving ? savingLabel : saveLabel}

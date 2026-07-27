@@ -1,28 +1,34 @@
+import { Bot, Plus } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "zustand";
-import { Bot, Plus } from "lucide-react";
-import { extensionStore } from "@/stores/extensionStore";
-import { stylesStore } from "@/stores/stylesStore";
-import {
-  toolsStore,
-  requestAnswers,
-  acceptAnswer,
-  acceptTransform,
-  clearToolResults,
-} from "@/stores/tools/toolsStore";
+import { resolveIcon } from "@/libs/icons";
+import { emitSuccessToastr } from "@/libs/toast";
 import {
   aiMenuStore,
+  closeChat,
   closePopover,
   setActiveInputItem,
   setDirection,
-  closeChat,
 } from "@/stores/aiMenuStore";
-import { ChatPanel } from "@/views/tools/ChatPanel";
+import { extensionStore } from "@/stores/extensionStore";
+import { stylesStore } from "@/stores/stylesStore";
 import { resetChat } from "@/stores/tools/chatStore";
-import { emitSuccessToastr } from "@/libs/toast";
-import type { ResolvedAiMenuConfig, ResolvedAnswerToolConfig, ResolvedAnswerToolPageConfig, ResolvedTransformItemConfig, ThemeColorSet } from "@/types";
+import {
+  acceptAnswer,
+  acceptTransform,
+  clearToolResults,
+  requestAnswers,
+  toolsStore,
+} from "@/stores/tools/toolsStore";
+import type {
+  ResolvedAiMenuConfig,
+  ResolvedAnswerToolConfig,
+  ResolvedAnswerToolPageConfig,
+  ResolvedTransformItemConfig,
+  ThemeColorSet,
+} from "@/types";
+import { ChatPanel } from "@/views/tools/ChatPanel";
 import { Window } from "@/views/Window";
-import { resolveIcon } from "@/libs/icons";
 
 interface AiPopoverProps {
   colors: ThemeColorSet;
@@ -51,19 +57,25 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
 
   const activeItem = activeItemId
     ? [...toolItems, ...transformItems].find(
-        (item): item is ResolvedAnswerToolConfig | ResolvedTransformItemConfig =>
+        (
+          item,
+        ): item is ResolvedAnswerToolConfig | ResolvedTransformItemConfig =>
           "id" in item && item.id === activeItemId,
       )
     : null;
 
   const activeAnswerItem =
-    activeItem && "type" in activeItem && activeItem.type === "answer" ? activeItem : null;
+    activeItem && "type" in activeItem && activeItem.type === "answer"
+      ? activeItem
+      : null;
 
   const optionsPageConfig: ResolvedAnswerToolPageConfig | null =
     activeAnswerItem?.pages?.find((p) => p.type === "options") ?? null;
 
   const directionPageCfg: ResolvedAnswerToolPageConfig | null =
-    activeInputItem?.pages?.find((p: ResolvedAnswerToolPageConfig) => p.type === "direction") ?? null;
+    activeInputItem?.pages?.find(
+      (p: ResolvedAnswerToolPageConfig) => p.type === "direction",
+    ) ?? null;
 
   const OptionsActionIcon = resolveIcon(optionsPageConfig?.action?.icon);
   const DirectionActionIcon = resolveIcon(directionPageCfg?.action?.icon);
@@ -90,11 +102,16 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
             tooltip: newConversationLabel,
             onClick: () => {
               resetChat();
-              emitSuccessToastr("CHAT_NEW_CONVERSATION_STARTED", { id: "vigogh-chat-new" });
+              emitSuccessToastr("CHAT_NEW_CONVERSATION_STARTED", {
+                id: "vigogh-chat-new",
+              });
             },
           },
         ]}
-        onClose={() => { closeChat(); closePopover("ai"); }}
+        onClose={() => {
+          closeChat();
+          closePopover("ai");
+        }}
       >
         <ChatPanel colors={colors} />
       </Window>
@@ -102,11 +119,21 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
   }
 
   if (showToolResultsPanel) {
-    const ActiveItemIcon = resolveIcon(activeAnswerItem?.icon ?? activeItem?.icon);
-    const title = activeAnswerItem?.label ?? activeInputItem?.label ?? activeItem?.label ?? "";
-    const hasSuggestions = toolsStatus === "success" && toolsSuggestions.length > 0;
+    const ActiveItemIcon = resolveIcon(
+      activeAnswerItem?.icon ?? activeItem?.icon,
+    );
+    const title =
+      activeAnswerItem?.label ??
+      activeInputItem?.label ??
+      activeItem?.label ??
+      "";
+    const hasSuggestions =
+      toolsStatus === "success" && toolsSuggestions.length > 0;
     const isLoading = toolsStatus === "loading";
-    const resultsDims = hasSuggestions || isLoading ? windows.aiResultsFull : windows.aiResultsCompact;
+    const resultsDims =
+      hasSuggestions || isLoading
+        ? windows.aiResultsFull
+        : windows.aiResultsCompact;
     return (
       <Window
         colors={colors}
@@ -127,71 +154,90 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
           {isLoading && (
             <div className="py-2 px-3 flex flex-col gap-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-5 rounded-md bg-white/5 animate-pulse" />
+                <div
+                  key={i}
+                  className="h-5 rounded-md bg-white/5 animate-pulse"
+                />
               ))}
             </div>
           )}
 
-          {toolsStatus === "error" && toolsErrorCode === "USAGE_LIMIT_EXCEEDED" && extensionConfig && (
-            <div className="flex items-center justify-center px-4 py-5">
-              <p className="m-0 text-sm text-center text-white/50">
-                {extensionConfig.messages.errors.USAGE_LIMIT_EXCEEDED || extensionConfig.messages.errors.DEFAULT}
-              </p>
-            </div>
-          )}
+          {toolsStatus === "error" &&
+            toolsErrorCode === "USAGE_LIMIT_EXCEEDED" &&
+            extensionConfig && (
+              <div className="flex items-center justify-center px-4 py-5">
+                <p className="m-0 text-sm text-center text-white/50">
+                  {extensionConfig.messages.errors.USAGE_LIMIT_EXCEEDED ||
+                    extensionConfig.messages.errors.DEFAULT}
+                </p>
+              </div>
+            )}
 
-          {toolsStatus === "success" && toolsSuggestions.map((suggestion, i) => (
-            <SuggestionItem
-              key={i}
-              text={suggestion}
-              hoverBg={colors.itemSecondaryHoverBackground}
-              onClick={() => {
-                const isAnswer = activeAnswerItem !== null;
-                if (isAnswer) {
-                  acceptAnswer(suggestion);
-                } else {
-                  acceptTransform(suggestion);
-                }
-                clearToolResults();
-                closePopover("ai");
-              }}
-            />
-          ))}
+          {toolsStatus === "success" &&
+            toolsSuggestions.map((suggestion, i) => (
+              <SuggestionItem
+                key={i}
+                text={suggestion}
+                hoverBg={colors.itemSecondaryHoverBackground}
+                onClick={() => {
+                  const isAnswer = activeAnswerItem !== null;
+                  if (isAnswer) {
+                    acceptAnswer(suggestion);
+                  } else {
+                    acceptTransform(suggestion);
+                  }
+                  clearToolResults();
+                  closePopover("ai");
+                }}
+              />
+            ))}
         </div>
 
-        {activeAnswerItem && (toolsStatus === "success" || isLoading) && optionsPageConfig?.additionalInput?.enabled !== false && (
-          <div className="border-t border-white/10 px-3.5 pt-2.5 pb-3 flex flex-col gap-2">
-            <span className="block text-right text-[10px] text-white/60">
-              {direction.length}/{optionsPageConfig?.additionalInput?.maxLength ?? config.defaultAdditionalInputMaxLength}
-            </span>
-            <textarea
-              rows={2}
-              className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-white placeholder:text-white/70 resize-none outline-none focus:border-white/20"
-              maxLength={optionsPageConfig?.additionalInput?.maxLength ?? config.defaultAdditionalInputMaxLength}
-              placeholder={optionsPageConfig?.additionalInput?.placeholder ?? ""}
-              value={direction}
-              disabled={isLoading}
-              onMouseDown={(e) => e.stopPropagation()}
-              onChange={(e) => setDirection(e.target.value)}
-            />
-            <button
-              className="vigogh-shine-btn flex items-center justify-center gap-1.5 py-2 px-3.5 text-white text-sm font-medium rounded-md w-full cursor-pointer border-none disabled:opacity-50"
-              disabled={isLoading}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (activeItemId) {
-                  requestAnswers(activeItemId, direction);
-                  setDirection("");
+        {activeAnswerItem &&
+          (toolsStatus === "success" || isLoading) &&
+          optionsPageConfig?.additionalInput?.enabled !== false && (
+            <div className="border-t border-white/10 px-3.5 pt-2.5 pb-3 flex flex-col gap-2">
+              <span className="block text-right text-[10px] text-white/60">
+                {direction.length}/
+                {optionsPageConfig?.additionalInput?.maxLength ??
+                  config.defaultAdditionalInputMaxLength}
+              </span>
+              <textarea
+                rows={2}
+                className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-white placeholder:text-white/70 resize-none outline-none focus:border-white/20"
+                maxLength={
+                  optionsPageConfig?.additionalInput?.maxLength ??
+                  config.defaultAdditionalInputMaxLength
                 }
-              }}
-            >
-              <OptionsActionIcon size={14} className="shrink-0" />
-              {optionsPageConfig?.action?.label}
-            </button>
-          </div>
-        )}
+                placeholder={
+                  optionsPageConfig?.additionalInput?.placeholder ?? ""
+                }
+                value={direction}
+                disabled={isLoading}
+                onMouseDown={(e) => e.stopPropagation()}
+                onChange={(e) => setDirection(e.target.value)}
+              />
+              <button
+                className="vigogh-shine-btn flex items-center justify-center gap-1.5 py-2 px-3.5 text-white text-sm font-medium rounded-md w-full cursor-pointer border-none disabled:opacity-50"
+                disabled={isLoading}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (activeItemId) {
+                    requestAnswers(activeItemId, direction);
+                    setDirection("");
+                  }
+                }}
+              >
+                <OptionsActionIcon size={14} className="shrink-0" />
+                {optionsPageConfig?.action?.label}
+              </button>
+            </div>
+          )}
       </Window>
     );
   }
@@ -206,17 +252,26 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
         bottom={bottom}
         right={right}
         {...windows.aiDirection}
-        onClose={() => { setDirection(""); setActiveInputItem(null); closePopover("ai"); }}
+        onClose={() => {
+          setDirection("");
+          setActiveInputItem(null);
+          closePopover("ai");
+        }}
         disclaimer={disclaimerText}
       >
         <div className="px-3.5 pt-2 pb-3 flex flex-col gap-2.5">
           <span className="block text-right text-[10px] text-white/60">
-            {direction.length}/{directionPageCfg?.additionalInput?.maxLength ?? config.defaultAdditionalInputMaxLength}
+            {direction.length}/
+            {directionPageCfg?.additionalInput?.maxLength ??
+              config.defaultAdditionalInputMaxLength}
           </span>
           <textarea
             rows={3}
             className="w-full text-sm bg-white/5 border border-white/10 rounded-md px-2.5 py-2 text-white placeholder:text-white/70 resize-none outline-none focus:border-white/20"
-            maxLength={directionPageCfg?.additionalInput?.maxLength ?? config.defaultAdditionalInputMaxLength}
+            maxLength={
+              directionPageCfg?.additionalInput?.maxLength ??
+              config.defaultAdditionalInputMaxLength
+            }
             placeholder={directionPageCfg?.additionalInput?.placeholder ?? ""}
             value={direction}
             onMouseDown={(e) => e.stopPropagation()}
@@ -224,7 +279,10 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
           />
           <button
             className="vigogh-shine-btn flex items-center justify-center gap-1.5 py-2 px-3.5 text-white text-sm font-medium rounded-md w-full cursor-pointer border-none"
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

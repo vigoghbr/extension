@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useStore } from "zustand";
-import { notesStore } from "@/stores/tools/notesStore";
 import {
   loadStickyState,
   setGroupFocused,
   stickyNotesStore,
 } from "@/stores/stickyNotesStore";
-import StickyNote from "./StickyNote";
+import { notesStore } from "@/stores/tools/notesStore";
 import type { ThemeColorSet } from "@/types";
+import StickyNote from "./StickyNote";
 
 interface StickyNotesLayerProps {
   colors: ThemeColorSet;
@@ -29,8 +29,7 @@ export default function StickyNotesLayer({ colors }: StickyNotesLayerProps) {
       const path = e.composedPath();
       const inside = path.some(
         (el) =>
-          el instanceof HTMLElement &&
-          el.dataset?.vigoghSticky === "true",
+          el instanceof HTMLElement && el.dataset?.vigoghSticky === "true",
       );
       setGroupFocused(inside);
     };

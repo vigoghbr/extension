@@ -1,19 +1,22 @@
-import type {
-  SiteConfig,
-  SiteContextMode,
-  SiteContextWithModes,
-  SiteContextDirect,
-  CaretCoordinates,
-  ConversationMessage,
-  SiteStrategy,
-} from "@/types";
 import {
   insertTextIntoContentEditable,
   insertTextIntoTextarea,
   replaceAllTextInContentEditable,
   replaceAllTextInTextarea,
 } from "@/libs/text-insertion";
-import { pasteFileIntoEditor, pasteTextIntoEditor } from "@/utils/general-strategy";
+import type {
+  CaretCoordinates,
+  ConversationMessage,
+  SiteConfig,
+  SiteContextDirect,
+  SiteContextMode,
+  SiteContextWithModes,
+  SiteStrategy,
+} from "@/types";
+import {
+  pasteFileIntoEditor,
+  pasteTextIntoEditor,
+} from "@/utils/general-strategy";
 
 export function hasModesContext(
   context: SiteConfig["context"],
@@ -39,7 +42,12 @@ export function extractMessagesFromContainer(
     return messages;
   }
 
-  type MediaBody = { image?: string; audio?: string; video?: string; file?: string };
+  type MediaBody = {
+    image?: string;
+    audio?: string;
+    video?: string;
+    file?: string;
+  };
   type MessageBody = { text: string } | MediaBody;
 
   if (!mode.messageSelector) return messages;
@@ -72,11 +80,14 @@ export function extractMessagesFromContainer(
       const metaSource = mode.metadataSelector
         ? (el.querySelector(mode.metadataSelector) ?? el)
         : el;
-      const meta = mode.metadataAttribute ? (metaSource.getAttribute(mode.metadataAttribute) ?? "") : "";
+      const meta = mode.metadataAttribute
+        ? (metaSource.getAttribute(mode.metadataAttribute) ?? "")
+        : "";
       let text = rawText;
       if (mode.metadataStrip === "bracket-timestamp" && meta) {
         const bracketEnd = meta.indexOf("] ");
-        const shortTime = bracketEnd >= 0 ? meta.slice(1, bracketEnd).split(",")[0].trim() : "";
+        const shortTime =
+          bracketEnd >= 0 ? meta.slice(1, bracketEnd).split(",")[0].trim() : "";
         if (shortTime && text.endsWith(shortTime)) {
           text = text.slice(0, -shortTime.length).trim();
         }
@@ -106,11 +117,11 @@ export function extractMessagesFromContainer(
           ? el.querySelector(placeholder.contentSelector)
           : target;
         const value = contentEl
-          ? (placeholder.contentAttribute
-              ? contentEl.getAttribute(placeholder.contentAttribute)
-              : (contentEl.getAttribute("src") ??
-                 contentEl.getAttribute("href") ??
-                 contentEl.getAttribute("data-src")))
+          ? placeholder.contentAttribute
+            ? contentEl.getAttribute(placeholder.contentAttribute)
+            : (contentEl.getAttribute("src") ??
+              contentEl.getAttribute("href") ??
+              contentEl.getAttribute("data-src"))
           : null;
 
         if (value) {
@@ -126,9 +137,11 @@ export function extractMessagesFromContainer(
 
     let role: "incoming" | "outgoing" = "incoming";
     if (mode.outgoingSelector) {
-      const isOutgoing = mode.outgoingRelation === "ancestor"
-        ? !!el.closest(mode.outgoingSelector)
-        : el.matches(mode.outgoingSelector) || !!el.querySelector(mode.outgoingSelector);
+      const isOutgoing =
+        mode.outgoingRelation === "ancestor"
+          ? !!el.closest(mode.outgoingSelector)
+          : el.matches(mode.outgoingSelector) ||
+            !!el.querySelector(mode.outgoingSelector);
       role = isOutgoing ? "outgoing" : "incoming";
     }
     messages.push({ role, ...body });
@@ -175,10 +188,7 @@ export class SiteEngine implements SiteStrategy {
   }
 
   getCurrentText(editor: HTMLElement): string {
-    if (
-      this.config.editorType === "mixed" &&
-      editor.tagName === "TEXTAREA"
-    ) {
+    if (this.config.editorType === "mixed" && editor.tagName === "TEXTAREA") {
       return (editor as HTMLTextAreaElement).value;
     }
 
@@ -194,10 +204,7 @@ export class SiteEngine implements SiteStrategy {
   }
 
   getCaretCoordinates(editor: HTMLElement): CaretCoordinates | null {
-    if (
-      this.config.editorType === "mixed" &&
-      editor.tagName === "TEXTAREA"
-    ) {
+    if (this.config.editorType === "mixed" && editor.tagName === "TEXTAREA") {
       const rect = editor.getBoundingClientRect();
       return {
         top: rect.top,
@@ -229,10 +236,7 @@ export class SiteEngine implements SiteStrategy {
   }
 
   insertText(editor: HTMLElement, text: string): void {
-    if (
-      this.config.editorType === "mixed" &&
-      editor.tagName === "TEXTAREA"
-    ) {
+    if (this.config.editorType === "mixed" && editor.tagName === "TEXTAREA") {
       insertTextIntoTextarea(editor as HTMLTextAreaElement, text);
     } else {
       insertTextIntoContentEditable(editor, text);
@@ -240,23 +244,21 @@ export class SiteEngine implements SiteStrategy {
   }
 
   replaceAllText(editor: HTMLElement, text: string): void {
-    if (
-      this.config.editorType === "mixed" &&
-      editor.tagName === "TEXTAREA"
-    ) {
+    if (this.config.editorType === "mixed" && editor.tagName === "TEXTAREA") {
       replaceAllTextInTextarea(editor as HTMLTextAreaElement, text);
     } else {
       replaceAllTextInContentEditable(editor, text);
     }
   }
 
-  replaceSelectedText(editor: HTMLElement, newText: string, savedRange: Range): void {
+  replaceSelectedText(
+    editor: HTMLElement,
+    newText: string,
+    savedRange: Range,
+  ): void {
     editor.focus();
 
-    if (
-      this.config.editorType === "mixed" &&
-      editor.tagName === "TEXTAREA"
-    ) {
+    if (this.config.editorType === "mixed" && editor.tagName === "TEXTAREA") {
       const textarea = editor as HTMLTextAreaElement;
       const start = savedRange.startOffset;
       const end = savedRange.endOffset;
@@ -302,7 +304,12 @@ export class SiteEngine implements SiteStrategy {
     editor.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  pasteText(editor: HTMLElement, text: string, mode: "insert" | "replaceAll" | "replaceSelected", savedRange?: Range): void {
+  pasteText(
+    editor: HTMLElement,
+    text: string,
+    mode: "insert" | "replaceAll" | "replaceSelected",
+    savedRange?: Range,
+  ): void {
     pasteTextIntoEditor(editor, text, mode, savedRange);
   }
 

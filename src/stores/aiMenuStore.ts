@@ -1,9 +1,9 @@
 import { createStore } from "zustand/vanilla";
-import { toolsStore } from "@/stores/tools/toolsStore";
 import { hidePageIndicator } from "@/stores/indicatorsStore";
+import { toolsStore } from "@/stores/tools/toolsStore";
+import type { ResolvedAnswerToolConfig } from "@/types";
 import { onLoginRequired } from "@/utils/login-required";
 import { setForceCloseAiMenu } from "@/utils/tool-error";
-import type { ResolvedAnswerToolConfig } from "@/types";
 
 export type ActivePopover = "ai" | "files" | "messages" | "notes";
 
@@ -36,14 +36,24 @@ export function closePopover(popover?: ActivePopover): void {
   if (!popover) {
     const prev = aiMenuStore.getState().activeInputItem;
     if (prev) hidePageIndicator();
-    aiMenuStore.setState({ activePopovers: [], activeInputItem: null, direction: "", chatOpen: false });
+    aiMenuStore.setState({
+      activePopovers: [],
+      activeInputItem: null,
+      direction: "",
+      chatOpen: false,
+    });
     return;
   }
   const { activePopovers, activeInputItem } = aiMenuStore.getState();
   const next = activePopovers.filter((p) => p !== popover);
   if (popover === "ai") {
     if (activeInputItem) hidePageIndicator();
-    aiMenuStore.setState({ activePopovers: next, activeInputItem: null, direction: "", chatOpen: false });
+    aiMenuStore.setState({
+      activePopovers: next,
+      activeInputItem: null,
+      direction: "",
+      chatOpen: false,
+    });
   } else {
     aiMenuStore.setState({ activePopovers: next });
   }
@@ -51,7 +61,12 @@ export function closePopover(popover?: ActivePopover): void {
 
 export function forceCloseAiMenu(): void {
   if (aiMenuStore.getState().activeInputItem) hidePageIndicator();
-  aiMenuStore.setState({ activePopovers: [], activeInputItem: null, direction: "", chatOpen: false });
+  aiMenuStore.setState({
+    activePopovers: [],
+    activeInputItem: null,
+    direction: "",
+    chatOpen: false,
+  });
 }
 
 export function togglePopover(popover: ActivePopover): void {
@@ -82,7 +97,9 @@ export function closeChat(): void {
   aiMenuStore.setState({ chatOpen: false });
 }
 
-export function setActiveInputItem(item: ResolvedAnswerToolConfig | null): void {
+export function setActiveInputItem(
+  item: ResolvedAnswerToolConfig | null,
+): void {
   const prev = aiMenuStore.getState().activeInputItem;
   aiMenuStore.setState({ activeInputItem: item });
 

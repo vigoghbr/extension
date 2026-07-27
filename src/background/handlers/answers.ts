@@ -1,19 +1,27 @@
-import api, { extractApiErrorCode, isUnauthorizedError } from "@/libs/api-dispatch";
-import { getEndpoint } from "@/libs/endpoints";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
+import api, {
+  extractApiErrorCode,
+  isUnauthorizedError,
+} from "@/libs/api-dispatch";
+import { getEndpoint } from "@/libs/endpoints";
 
-export const handleMessages: BackgroundMessageHandler = (message, _sender, sendResponse) => {
+export const handleMessages: BackgroundMessageHandler = (
+  message,
+  _sender,
+  sendResponse,
+) => {
   if (message.action === "answers_request") {
     const apiPath = message.apiPath ?? getEndpoint("answers");
-    api.post(apiPath, {
-      pageURL: message.url,
-      pageScreenshot: message.pageScreenshot ?? "",
-      pageContent: message.pageContent ?? "",
-      pageMetadata: message.pageMetadata ?? "",
-      pageForms: message.pageForms ?? "",
-      messages: message.messages ?? [],
-      direction: message.direction,
-    })
+    api
+      .post(apiPath, {
+        pageURL: message.url,
+        pageScreenshot: message.pageScreenshot ?? "",
+        pageContent: message.pageContent ?? "",
+        pageMetadata: message.pageMetadata ?? "",
+        pageForms: message.pageForms ?? "",
+        messages: message.messages ?? [],
+        direction: message.direction,
+      })
       .then(({ data }) =>
         sendResponse({
           success: true,

@@ -1,15 +1,21 @@
+import {
+  Bot,
+  BotOff,
+  NotebookPen,
+  Pin,
+  PinOff,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { Bot, BotOff, NotebookPen, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { useStore } from "zustand";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
-import { Window, type WindowAction } from "@/views/Window";
 import { extensionStore } from "@/stores/extensionStore";
-import { stylesStore } from "@/stores/stylesStore";
 import {
   hideStickyNote,
   showStickyNote,
   stickyNotesStore,
 } from "@/stores/stickyNotesStore";
+import { stylesStore } from "@/stores/stylesStore";
 import {
   createEmptyNote,
   deleteNote,
@@ -17,22 +23,51 @@ import {
   notesStore,
   toggleNoteAI,
 } from "@/stores/tools/notesStore";
-import { getNotePreview } from "@/utils/notes-html";
 import type { Note } from "@/types";
+import { getNotePreview } from "@/utils/notes-html";
 import type { PopoverProps } from "@/views/tools/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
+import { Window, type WindowAction } from "@/views/Window";
 
-export function NotesPopover({ colors, label, bottom, right, onClose }: PopoverProps) {
+export function NotesPopover({
+  colors,
+  label,
+  bottom,
+  right,
+  onClose,
+}: PopoverProps) {
   const items = useStore(notesStore, (s) => s.items);
   const status = useStore(notesStore, (s) => s.status);
   const visibleIds = useStore(stickyNotesStore, (s) => s.visibleIds);
   const messages = useStore(extensionStore, (s) => s.config?.messages);
-  const pinHint = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.notesPinHint ?? "");
-  const aiEnableLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.notesAIEnableLabel ?? "");
-  const aiDisableLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.notesAIDisableLabel ?? "");
-  const emptyLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.notesEmpty ?? "");
-  const noteEmptyLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.noteEmptyLabel ?? "");
-  const deleteLabel = useStore(extensionStore, (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "");
-  const activePinBorderColor = useStore(stylesStore, (s) => s.styles?.notesPopover.activePinBorderColor ?? "transparent");
+  const pinHint = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.notesPinHint ?? "",
+  );
+  const aiEnableLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.notesAIEnableLabel ?? "",
+  );
+  const aiDisableLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.notesAIDisableLabel ?? "",
+  );
+  const emptyLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.notesEmpty ?? "",
+  );
+  const noteEmptyLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.noteEmptyLabel ?? "",
+  );
+  const deleteLabel = useStore(
+    extensionStore,
+    (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "",
+  );
+  const activePinBorderColor = useStore(
+    stylesStore,
+    (s) => s.styles?.notesPopover.activePinBorderColor ?? "transparent",
+  );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.notes);
 
   useEffect(() => {
@@ -110,7 +145,21 @@ interface ListViewProps {
   onDelete: (id: string) => void;
 }
 
-function ListView({ items, status, visibleIds, hoverBg, aiEnableLabel, aiDisableLabel, emptyLabel, noteEmptyLabel, deleteLabel, activePinBorderColor, onToggle, onToggleAI, onDelete }: ListViewProps) {
+function ListView({
+  items,
+  status,
+  visibleIds,
+  hoverBg,
+  aiEnableLabel,
+  aiDisableLabel,
+  emptyLabel,
+  noteEmptyLabel,
+  deleteLabel,
+  activePinBorderColor,
+  onToggle,
+  onToggleAI,
+  onDelete,
+}: ListViewProps) {
   if (status === "loading") {
     return (
       <div className="py-4 px-3 flex flex-col gap-2">
@@ -165,7 +214,19 @@ interface NoteItemProps {
   onDelete: () => void;
 }
 
-function NoteItem({ note, active, hoverBg, aiEnableLabel, aiDisableLabel, noteEmptyLabel, deleteLabel, activePinBorderColor, onToggle, onToggleAI, onDelete }: NoteItemProps) {
+function NoteItem({
+  note,
+  active,
+  hoverBg,
+  aiEnableLabel,
+  aiDisableLabel,
+  noteEmptyLabel,
+  deleteLabel,
+  activePinBorderColor,
+  onToggle,
+  onToggleAI,
+  onDelete,
+}: NoteItemProps) {
   const [hovered, setHovered] = useState(false);
   const text = getNotePreview(note.content) || noteEmptyLabel;
   const disabledForAI = note.disabledForAI ?? false;
@@ -177,18 +238,29 @@ function NoteItem({ note, active, hoverBg, aiEnableLabel, aiDisableLabel, noteEm
       style={{
         background: hovered ? hoverBg : "transparent",
         width: "calc(100% - 8px)",
-        borderLeft: active ? `2px solid ${activePinBorderColor}` : "2px solid transparent",
+        borderLeft: active
+          ? `2px solid ${activePinBorderColor}`
+          : "2px solid transparent",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(); }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
     >
       <div className="shrink-0 mt-0.5 text-white/50">
         {active ? <Pin size={14} /> : <PinOff size={14} />}
       </div>
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="text-sm text-white/85 leading-snug line-clamp-2 whitespace-pre-line">{text}</span>
+        <span className="text-sm text-white/85 leading-snug line-clamp-2 whitespace-pre-line">
+          {text}
+        </span>
       </div>
       {hovered && (
         <>
@@ -199,7 +271,11 @@ function NoteItem({ note, active, hoverBg, aiEnableLabel, aiDisableLabel, noteEm
                 aria-label={aiToggleLabel}
                 className="shrink-0 text-white/60 hover:text-white transition-colors p-1 rounded cursor-pointer mt-0.5"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleAI(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleAI();
+                }}
               >
                 {disabledForAI ? <BotOff size={14} /> : <Bot size={14} />}
               </button>
@@ -213,7 +289,11 @@ function NoteItem({ note, active, hoverBg, aiEnableLabel, aiDisableLabel, noteEm
                 aria-label={deleteLabel}
                 className="shrink-0 text-white/60 hover:text-white transition-colors p-1 rounded cursor-pointer mt-0.5"
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete();
+                }}
               >
                 <Trash2 size={14} />
               </button>

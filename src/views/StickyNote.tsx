@@ -1,20 +1,20 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader, Save, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { useDraggable } from "@/hooks/useDraggable";
-import { useResizable, type ResizeEdge } from "@/hooks/useResizable";
+import { type ResizeEdge, useResizable } from "@/hooks/useResizable";
 import { extensionStore } from "@/stores/extensionStore";
-import { stylesStore } from "@/stores/stylesStore";
 import {
   hideStickyNote,
   saveStickyPosition,
   saveStickySize,
 } from "@/stores/stickyNotesStore";
+import { stylesStore } from "@/stores/stylesStore";
 import { updateNote } from "@/stores/tools/notesStore";
+import type { Note, ThemeColorSet } from "@/types";
 import { stripHtml } from "@/utils/notes-html";
 import { resolveZIndex } from "@/utils/z-index";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/views/ui/tooltip";
-import type { Note, ThemeColorSet } from "@/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 interface StickyNoteProps {
   note: Note;
@@ -26,25 +26,97 @@ interface StickyNoteProps {
 
 const ALL_EDGES: ResizeEdge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
-function buildEdgeStyles(handleSize: number): Record<ResizeEdge, { style: React.CSSProperties; cursor: string }> {
+function buildEdgeStyles(
+  handleSize: number,
+): Record<ResizeEdge, { style: React.CSSProperties; cursor: string }> {
   return {
-    n: { style: { top: 0, left: handleSize, right: handleSize, height: handleSize }, cursor: "ns-resize" },
-    s: { style: { bottom: 0, left: handleSize, right: handleSize, height: handleSize }, cursor: "ns-resize" },
-    e: { style: { right: 0, top: handleSize, bottom: handleSize, width: handleSize }, cursor: "ew-resize" },
-    w: { style: { left: 0, top: handleSize, bottom: handleSize, width: handleSize }, cursor: "ew-resize" },
-    ne: { style: { top: 0, right: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nesw-resize" },
-    nw: { style: { top: 0, left: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nwse-resize" },
-    se: { style: { bottom: 0, right: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nwse-resize" },
-    sw: { style: { bottom: 0, left: 0, width: handleSize * 2, height: handleSize * 2 }, cursor: "nesw-resize" },
+    n: {
+      style: {
+        top: 0,
+        left: handleSize,
+        right: handleSize,
+        height: handleSize,
+      },
+      cursor: "ns-resize",
+    },
+    s: {
+      style: {
+        bottom: 0,
+        left: handleSize,
+        right: handleSize,
+        height: handleSize,
+      },
+      cursor: "ns-resize",
+    },
+    e: {
+      style: {
+        right: 0,
+        top: handleSize,
+        bottom: handleSize,
+        width: handleSize,
+      },
+      cursor: "ew-resize",
+    },
+    w: {
+      style: {
+        left: 0,
+        top: handleSize,
+        bottom: handleSize,
+        width: handleSize,
+      },
+      cursor: "ew-resize",
+    },
+    ne: {
+      style: {
+        top: 0,
+        right: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nesw-resize",
+    },
+    nw: {
+      style: { top: 0, left: 0, width: handleSize * 2, height: handleSize * 2 },
+      cursor: "nwse-resize",
+    },
+    se: {
+      style: {
+        bottom: 0,
+        right: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nwse-resize",
+    },
+    sw: {
+      style: {
+        bottom: 0,
+        left: 0,
+        width: handleSize * 2,
+        height: handleSize * 2,
+      },
+      cursor: "nesw-resize",
+    },
   };
 }
 
-export default function StickyNote({ note, index, colors, savedPos, savedSize }: StickyNoteProps) {
+export default function StickyNote({
+  note,
+  index,
+  colors,
+  savedPos,
+  savedSize,
+}: StickyNoteProps) {
   const stickyStyles = useStore(stylesStore, (s) => s.styles?.stickyNote);
-  const stickyWindow = useStore(stylesStore, (s) => s.styles?.windows.stickyNote);
+  const stickyWindow = useStore(
+    stylesStore,
+    (s) => s.styles?.windows.stickyNote,
+  );
   const zLayers = useStore(stylesStore, (s) => s.styles?.zLayers);
   const messages = useStore(extensionStore, (s) => s.config?.messages);
-  const dragMargin = useStore(extensionStore, (s) => s.config?.behavior.windowDragMarginPx) ?? 20;
+  const dragMargin =
+    useStore(extensionStore, (s) => s.config?.behavior.windowDragMarginPx) ??
+    20;
   const dragLabel = messages?.info.DRAG_LABEL;
   const closeLabel = messages?.info.CLOSE_LABEL;
 
@@ -72,9 +144,12 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
   const buttonSize = stickyStyles?.buttonSize ?? 20;
   const saveIconSize = stickyStyles?.saveIconSize ?? 12;
   const closeIconSize = stickyStyles?.closeIconSize ?? 13;
-  const boxShadowFocused = stickyStyles?.boxShadow ?? "0 8px 24px rgba(0,0,0,0.4)";
-  const boxShadowUnfocused = stickyStyles?.boxShadowUnfocused ?? "0 4px 12px rgba(0,0,0,0.25)";
-  const placeholderColor = stickyStyles?.placeholderColor ?? "rgba(255,255,255,0.4)";
+  const boxShadowFocused =
+    stickyStyles?.boxShadow ?? "0 8px 24px rgba(0,0,0,0.4)";
+  const boxShadowUnfocused =
+    stickyStyles?.boxShadowUnfocused ?? "0 4px 12px rgba(0,0,0,0.25)";
+  const placeholderColor =
+    stickyStyles?.placeholderColor ?? "rgba(255,255,255,0.4)";
   const transitionMs = stickyStyles?.transitionMs ?? 200;
   const edgeStyles = buildEdgeStyles(handleSize);
 
@@ -106,6 +181,7 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
     onPositionChange: setPos,
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these style values drive the header's rendered size and arrive asynchronously from stylesStore after mount
   useLayoutEffect(() => {
     if (headerRef.current) {
       setHeaderHeight(headerRef.current.offsetHeight);
@@ -115,11 +191,13 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       const path = e.composedPath();
-      const inside = containerRef.current && path.includes(containerRef.current);
+      const inside =
+        containerRef.current && path.includes(containerRef.current);
       setIsFocused(!!inside);
     };
     document.addEventListener("mousedown", handleMouseDown, true);
-    return () => document.removeEventListener("mousedown", handleMouseDown, true);
+    return () =>
+      document.removeEventListener("mousedown", handleMouseDown, true);
   }, []);
 
   useEffect(() => {
@@ -133,6 +211,7 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
     }
   }, [note.content]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: must run once at mount only, to seed the contenteditable div; re-running on content change would reset the caret while typing
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerText !== content) {
       editorRef.current.innerText = content;
@@ -238,7 +317,11 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
                 <button
                   type="button"
                   className="flex items-center justify-center rounded bg-transparent text-white cursor-pointer hover:text-white border-none"
-                  style={{ padding: 0, width: `${buttonSize}px`, height: `${buttonSize}px` }}
+                  style={{
+                    padding: 0,
+                    width: `${buttonSize}px`,
+                    height: `${buttonSize}px`,
+                  }}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -249,17 +332,27 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
                     handleSaveAction();
                   }}
                 >
-                  {saving ? <Loader size={saveIconSize} className="animate-spin" /> : <Save size={saveIconSize} strokeWidth={2.5} />}
+                  {saving ? (
+                    <Loader size={saveIconSize} className="animate-spin" />
+                  ) : (
+                    <Save size={saveIconSize} strokeWidth={2.5} />
+                  )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{messages?.info.NOTE_SAVE_TOOLTIP ?? ""}</TooltipContent>
+              <TooltipContent>
+                {messages?.info.NOTE_SAVE_TOOLTIP ?? ""}
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   className="flex items-center justify-center rounded bg-transparent text-white cursor-pointer border-none"
-                  style={{ padding: 0, width: `${buttonSize}px`, height: `${buttonSize}px` }}
+                  style={{
+                    padding: 0,
+                    width: `${buttonSize}px`,
+                    height: `${buttonSize}px`,
+                  }}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -273,7 +366,9 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
                   <X size={closeIconSize} />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{messages?.info.NOTE_HIDE_TOOLTIP ?? closeLabel}</TooltipContent>
+              <TooltipContent>
+                {messages?.info.NOTE_HIDE_TOOLTIP ?? closeLabel}
+              </TooltipContent>
             </Tooltip>
           </div>
         </TooltipTrigger>
@@ -346,7 +441,11 @@ export default function StickyNote({ note, index, colors, savedPos, savedSize }:
         <div
           key={edge}
           className="absolute"
-          style={{ ...edgeStyles[edge].style, cursor: edgeStyles[edge].cursor, zIndex: 1 }}
+          style={{
+            ...edgeStyles[edge].style,
+            cursor: edgeStyles[edge].cursor,
+            zIndex: 1,
+          }}
           onMouseDown={handleEdgeMouseDown(edge)}
         />
       ))}

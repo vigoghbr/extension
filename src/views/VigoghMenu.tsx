@@ -1,6 +1,8 @@
 import { FolderOpen, NotebookPen, Settings, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
+import { resolveIcon } from "@/libs/icons";
+import { openSidePanel, requireSession } from "@/libs/sidepanel";
 import {
   aiMenuStore,
   closePopover,
@@ -10,23 +12,25 @@ import {
   setDirection,
   togglePopover,
 } from "@/stores/aiMenuStore";
+import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
+import { stylesStore } from "@/stores/stylesStore";
 import {
   autocompleteStore,
   toggleAutocomplete,
 } from "@/stores/tools/autocompleteStore";
-import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
-import { stylesStore } from "@/stores/stylesStore";
 import {
   applyTransform,
   requestAnswers,
   toolsStore,
 } from "@/stores/tools/toolsStore";
-import { popoverTools } from "@/views/tools/popovers";
-import type { AiButtonAppearance, ExtensionStylesAiMenu, ThemeColorSet } from "@/types";
-import { openSidePanel, requireSession } from "@/libs/sidepanel";
+import type {
+  AiButtonAppearance,
+  ExtensionStylesAiMenu,
+  ThemeColorSet,
+} from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
-import { resolveIcon } from "@/libs/icons";
 import { resolveZIndex } from "@/utils/z-index";
+import { popoverTools } from "@/views/tools/popovers";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 const QUICK_MESSAGES_TOOL_ID = "quick-messages";
@@ -36,7 +40,8 @@ export default function VigoghMenu() {
   const styles = useStore(stylesStore, (s) => s.styles);
   const autocompleteDisabled = useStore(extensionStore, (s) => s.disabled);
   const userToolsEnabled = useStore(extensionStore, (s) => s.userToolsEnabled);
-  const quickMessagesEnabled = userToolsEnabled[QUICK_MESSAGES_TOOL_ID] !== false;
+  const quickMessagesEnabled =
+    userToolsEnabled[QUICK_MESSAGES_TOOL_ID] !== false;
   const overlayVisible = useStore(autocompleteStore, (s) => s.overlayVisible);
   const hasEditorText = useStore(toolsStore, (s) => s.hasEditorText);
   const activePopovers = useStore(aiMenuStore, (s) => s.activePopovers);
@@ -53,7 +58,9 @@ export default function VigoghMenu() {
 
   useEffect(() => {
     chrome.storage.local
-      .get<{ "vigogh-ai-button-appearance"?: AiButtonAppearance }>("vigogh-ai-button-appearance")
+      .get<{ "vigogh-ai-button-appearance"?: AiButtonAppearance }>(
+        "vigogh-ai-button-appearance",
+      )
       .then((stored) => {
         const saved = stored["vigogh-ai-button-appearance"] ?? null;
         setAppearance(saved);
@@ -64,7 +71,9 @@ export default function VigoghMenu() {
     ) => {
       if ("vigogh-ai-button-appearance" in changes) {
         setAppearance(
-          (changes["vigogh-ai-button-appearance"].newValue as AiButtonAppearance | undefined) ?? null,
+          (changes["vigogh-ai-button-appearance"].newValue as
+            | AiButtonAppearance
+            | undefined) ?? null,
         );
       }
     };
@@ -159,7 +168,10 @@ export default function VigoghMenu() {
     const MARGIN = styles.aiMenu.dragMarginPx;
     const threshold = styles.aiMenu.dragThresholdPx;
     const onMove = (ev: MouseEvent) => {
-      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) < threshold)
+      if (
+        !moved &&
+        Math.hypot(ev.clientX - startX, ev.clientY - startY) < threshold
+      )
         return;
       moved = true;
       const pw = target.offsetWidth;
@@ -215,7 +227,9 @@ export default function VigoghMenu() {
           border: `1px solid ${colors.menuBorderColor}`,
           boxShadow: colors.containerShadow,
           opacity: menuOpen ? 0 : 0.45,
-          transform: menuOpen ? `scale(${styles.aiMenu.circleClosedScale})` : "scale(1)",
+          transform: menuOpen
+            ? `scale(${styles.aiMenu.circleClosedScale})`
+            : "scale(1)",
           transition: `opacity ${styles.aiMenu.circleTransitionMs}ms ease, transform ${styles.aiMenu.circleTransitionMs}ms ease`,
           pointerEvents: menuOpen ? "none" : "auto",
         }}
@@ -262,10 +276,11 @@ export default function VigoghMenu() {
           boxShadow: colors.containerShadow,
           overflow: "hidden",
           opacity: menuOpen ? 1 : 0,
-          transform: menuOpen ? "scale(1)" : `scale(${styles.aiMenu.menuClosedScale})`,
+          transform: menuOpen
+            ? "scale(1)"
+            : `scale(${styles.aiMenu.menuClosedScale})`,
           transformOrigin: "bottom right",
-          transition:
-            `opacity ${styles.aiMenu.menuTransitionMs}ms ease, transform ${styles.aiMenu.menuTransitionMs}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+          transition: `opacity ${styles.aiMenu.menuTransitionMs}ms ease, transform ${styles.aiMenu.menuTransitionMs}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
           pointerEvents: menuOpen ? "auto" : "none",
         }}
         onMouseEnter={() => setMenuHovered(true)}

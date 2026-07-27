@@ -1,6 +1,6 @@
 import { Tooltip as TooltipPrimitive } from "radix-ui";
-import { createContext, useContext } from "react";
 import type * as React from "react";
+import { createContext, useContext } from "react";
 
 import cn from "@/libs/cn";
 
@@ -11,7 +11,9 @@ function TooltipProvider({
   portalContainer,
   children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider> & { portalContainer?: HTMLElement | null }) {
+}: React.ComponentProps<typeof TooltipPrimitive.Provider> & {
+  portalContainer?: HTMLElement | null;
+}) {
   return (
     <TooltipPortalContext.Provider value={portalContainer ?? null}>
       <TooltipPrimitive.Provider
@@ -52,11 +54,17 @@ function TooltipContent({
           "overflow-hidden rounded-md px-2.5 py-1 text-[11px]",
           className,
         )}
-        style={{ background: "var(--muted)", color: "var(--foreground)", border: "1px solid var(--border)", whiteSpace: "nowrap", zIndex: 2147483647 }}
+        style={{
+          background: "var(--muted)",
+          color: "var(--foreground)",
+          border: "1px solid var(--border)",
+          whiteSpace: "nowrap",
+          zIndex: 2147483647,
+        }}
         {...props}
       />
     </TooltipPrimitive.Portal>
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };

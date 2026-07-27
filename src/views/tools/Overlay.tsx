@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { extensionStore } from "@/stores/extensionStore";
-import { autocompleteStore, acceptCompletion } from "@/stores/tools/autocompleteStore";
 import { measureWidth } from "@/libs/text-measure";
+import { extensionStore } from "@/stores/extensionStore";
+import {
+  acceptCompletion,
+  autocompleteStore,
+} from "@/stores/tools/autocompleteStore";
 
 interface EditorStyles {
   fontFamily: string;
@@ -35,7 +38,10 @@ export default function Overlay() {
   const currentEditor = useStore(extensionStore, (s) => s.currentEditor);
   const caretCoordinates = useStore(extensionStore, (s) => s.caretCoordinates);
   const config = useStore(extensionStore, (s) => s.config);
-  const currentCompletion = useStore(autocompleteStore, (s) => s.currentCompletion);
+  const currentCompletion = useStore(
+    autocompleteStore,
+    (s) => s.currentCompletion,
+  );
   const [editorStyles, setEditorStyles] = useState<EditorStyles | null>(null);
   const [, setTick] = useState(0);
 
@@ -63,7 +69,9 @@ export default function Overlay() {
     ro.observe(currentEditor as Element);
     return () => {
       window.removeEventListener("resize", bump);
-      window.removeEventListener("scroll", bump, { capture: true } as EventListenerOptions);
+      window.removeEventListener("scroll", bump, {
+        capture: true,
+      } as EventListenerOptions);
       ro.disconnect();
     };
   }, [currentEditor]);
@@ -81,10 +89,18 @@ export default function Overlay() {
   if (currentEditor && editorStyles) {
     const editorEl = currentEditor as HTMLElement;
     const rect = editorEl.getBoundingClientRect();
-    const paddingRight = parseFloat(window.getComputedStyle(editorEl).paddingRight) || 0;
+    const paddingRight =
+      parseFloat(window.getComputedStyle(editorEl).paddingRight) || 0;
     const rightEdge = rect.right - paddingRight;
-    const badgeWidth = measureWidth(overlayConfig.badgeText, badgeFont) + overlayConfig.badgePaddingX;
-    const available = rightEdge - caretCoordinates.left - badgeWidth - overlayConfig.badgeGap - overlayConfig.badgeSafetyPad;
+    const badgeWidth =
+      measureWidth(overlayConfig.badgeText, badgeFont) +
+      overlayConfig.badgePaddingX;
+    const available =
+      rightEdge -
+      caretCoordinates.left -
+      badgeWidth -
+      overlayConfig.badgeGap -
+      overlayConfig.badgeSafetyPad;
     displayText = fitText(currentCompletion, available, textFont);
   }
 
