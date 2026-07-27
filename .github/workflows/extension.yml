@@ -22,23 +22,23 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: './extension/.nvmrc'
+          node-version-file: '.nvmrc'
           cache: 'yarn'
-          cache-dependency-path: './extension/yarn.lock'
+          cache-dependency-path: 'yarn.lock'
 
       - name: Install dependencies
-        working-directory: ./extension
+        working-directory: .
         run: yarn
 
       - name: Build
-        working-directory: ./extension
+        working-directory: .
         run: make zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ github.sha }}
-          path: extension/extension.zip
+          path: extension.zip
 
       - name: Create GitHub Release
         env:
@@ -49,4 +49,4 @@ jobs:
             --title "Extension Build — $TAG" \
             --generate-notes \
             --target "$GITHUB_SHA" \
-            extension/extension.zip
+            extension.zip
