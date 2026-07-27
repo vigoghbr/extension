@@ -10,10 +10,7 @@ src/styles/index.compiled.css
 .extension-id
 
 # logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-firebase-debug.log*
+*.log
 
 # macOS
 .DS_Store
