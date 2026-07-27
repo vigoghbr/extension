@@ -1,6 +1,6 @@
 # Vigogh Browser Extension
 
-The Vigogh Chrome extension (Manifest V3) that brings AI-powered writing assistance to any page you're on: autocomplete, contextual answers, and text transforms, available from a side panel or directly inline.
+The [Vigogh](https://vigogh.com) Chrome extension (Manifest V3) that brings AI-powered writing assistance to any page you're on: autocomplete, contextual answers, and text transforms, available from a side panel or directly inline.
 
 This is the open source client. It ships no AI logic, prompts, or business rules of its own, everything it does is call the Vigogh API and relay the result back into the page. See [Architecture](#architecture) for why that split exists and what it means for what you're reading here.
 
