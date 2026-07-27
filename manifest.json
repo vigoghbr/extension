@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Vigogh",
+  "version": "2.0.10",
+  "description": "Multiplique sua produtividade",
+  "permissions": ["sidePanel", "scripting", "storage", "clipboardWrite", "activeTab"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Usar neste site"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+"content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.gif", "*.webp", "*.ttf"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://vigogh.com/*",
+      "https://*.vigogh.com/*",
+      "http://localhost:4321/*"
+    ]
+  }
+}

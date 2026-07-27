@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "./themes.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --radius: 0.625rem;
+}
+
+:host {
+  font-size: 16px;
+  line-height: 1.5;
+  --spacing: 4px;
+  --text-xs: 12px;
+  --text-xs--line-height: calc(16 / 12);
+  --text-sm: 14px;
+  --text-sm--line-height: calc(20 / 14);
+  --text-base: 16px;
+  --text-base--line-height: calc(24 / 16);
+  --text-lg: 18px;
+  --text-lg--line-height: calc(28 / 18);
+  --text-xl: 20px;
+  --text-xl--line-height: calc(28 / 20);
+  --text-2xl: 24px;
+  --text-2xl--line-height: calc(32 / 24);
+  --text-3xl: 30px;
+  --text-3xl--line-height: calc(36 / 30);
+  --text-4xl: 36px;
+  --text-4xl--line-height: calc(40 / 36);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+}
+
+
+@keyframes vigogh-glass-float-a {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(6px, -8px) scale(1.08); }
+  66% { transform: translate(-6px, 6px) scale(0.94); }
+}
+
+@keyframes vigogh-glass-float-b {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(8px, 6px) scale(0.92); }
+}
+
+@keyframes vigogh-ai-button-shine {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes vigogh-ai-button-sweep {
+  0% { left: -150%; }
+  30% { left: 150%; }
+  100% { left: 150%; }
+}
+
+@keyframes vigogh-ai-button-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+#vigogh-ai-button {
+  background: linear-gradient(
+    135deg,
+    var(--ai-btn-c1, oklch(0.45 0.2 265)) 0%,
+    var(--ai-btn-c2, oklch(0.45 0.27 300)) 50%,
+    var(--ai-btn-c1, oklch(0.45 0.2 265)) 100%
+  );
+  background-size: 200% 200%;
+  animation: vigogh-ai-button-shine var(--ai-btn-shine-duration, 4s) ease infinite;
+}
+
+#vigogh-ai-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, oklch(0.82 0.12 300 / 0.6), transparent);
+  transform: skewX(-20deg);
+  border-radius: var(--ai-btn-border-radius, 50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#vigogh-ai-button:hover::after {
+  opacity: 1;
+  animation: vigogh-ai-button-sweep var(--ai-btn-sweep-duration, 3s) infinite;
+}
+
+.vigogh-spinner {
+  animation: vigogh-ai-button-spin 0.8s linear infinite;
+  color: white;
+}
+
+@keyframes vigogh-ai-button-loading {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+#vigogh-ai-button.vigogh-ai-button-loading {
+  background: linear-gradient(
+    90deg,
+    var(--ai-btn-load-c1, oklch(0.65 0.3 300)),
+    var(--ai-btn-load-c2, oklch(0.65 0.3 220)),
+    var(--ai-btn-load-c3, oklch(0.75 0.3 60)),
+    var(--ai-btn-load-c1, oklch(0.65 0.3 300))
+  );
+  background-size: 300% 100%;
+  animation: vigogh-ai-button-loading var(--ai-btn-load-duration, 0.6s) linear infinite;
+}
+
+#vigogh-ai-button.vigogh-ai-button-loading::after {
+  display: none;
+}
+
+.vigogh-shine-btn {
+  position: relative;
+  overflow: hidden;
+  background: var(--shine-btn-bg);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.vigogh-shine-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--shine-btn-sweep), transparent);
+  transform: skewX(-20deg);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.vigogh-shine-btn:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: vigogh-ai-button-sweep 3s infinite;
+}
+
+.vigogh-shine-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.92);
+}
+
+.vigogh-shine-btn:disabled {
+  filter: grayscale(0.5) brightness(0.7);
+  cursor: not-allowed;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: color-mix(in oklch, var(--foreground) 65%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+  transition: background-color 150ms ease;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--foreground) 65%, transparent);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background-color: var(--foreground);
+}

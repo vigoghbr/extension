@@ -1,0 +1,50 @@
+import {
+  Bot,
+  Briefcase,
+  ExternalLink,
+  FilePen,
+  FileText,
+  type LucideIcon,
+  Maximize2,
+  MessageCircleQuestion,
+  MessageSquare,
+  Minimize2,
+  PanelRightOpen,
+  PenLine,
+  RefreshCw,
+  Reply,
+  Send,
+  Settings,
+  Sparkles,
+  SpellCheck,
+  Star,
+  Wand2,
+  Zap,
+} from "lucide-react";
+
+export const ICON_MAP: Record<string, LucideIcon> = {
+  Bot,
+  Briefcase,
+  ExternalLink,
+  FilePen,
+  FileText,
+  Maximize2,
+  MessageCircleQuestion,
+  MessageSquare,
+  Minimize2,
+  PanelRightOpen,
+  PenLine,
+  RefreshCw,
+  Reply,
+  Send,
+  Settings,
+  Sparkles,
+  SpellCheck,
+  Star,
+  Wand2,
+  Zap,
+};
+
+export function resolveIcon(name?: string): LucideIcon {
+  return (name && ICON_MAP[name]) || Sparkles;
+}

@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.zip
+src/styles/index.compiled.css
+
+# local debug config
+.extension-id
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

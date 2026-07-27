@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vigogh Debug Console (last 100)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 14px;
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0;
+        font-weight: 600;
+        color: #e6edf3;
+        white-space: nowrap;
+      }
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      input[type="search"] {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        min-width: 200px;
+      }
+      button {
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      button.active {
+        background: #f0883e;
+        color: #0d1117;
+        border-color: #f0883e;
+      }
+      button:hover {
+        filter: brightness(1.15);
+      }
+      #count-label {
+        margin-left: auto;
+        font-size: 12px;
+        color: #8b949e;
+        white-space: nowrap;
+      }
+      #log-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 0;
+      }
+      .log-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 3px 14px;
+        font-size: 12px;
+        border-bottom: 1px solid #161b22;
+      }
+      .log-row:hover {
+        background: #161b22;
+      }
+      .log-time {
+        color: #8b949e;
+        flex-shrink: 0;
+      }
+      .log-badge {
+        flex-shrink: 0;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .source-background .log-source {
+        background: #1f6feb;
+        color: white;
+      }
+      .source-sidepanel .log-source {
+        background: #8957e5;
+        color: white;
+      }
+      .source-content .log-source {
+        background: #2ea043;
+        color: white;
+      }
+      .level-log .log-level {
+        background: #30363d;
+        color: #c9d1d9;
+      }
+      .level-info .log-level {
+        background: #1f6feb;
+        color: white;
+      }
+      .level-warn .log-level {
+        background: #9e6a03;
+        color: white;
+      }
+      .level-error .log-level {
+        background: #da3633;
+        color: white;
+      }
+      .log-row.level-error {
+        background: rgba(218, 54, 51, 0.08);
+      }
+      .log-row.level-warn {
+        background: rgba(158, 106, 3, 0.08);
+      }
+      .log-prefix {
+        flex-shrink: 0;
+        color: #e6edf3;
+      }
+      .log-data {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #8b949e;
+        cursor: pointer;
+        flex: 1;
+      }
+      .log-data.collapsed {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #empty-state {
+        padding: 24px;
+        color: #8b949e;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Vigogh Debug Console (last 100)</h1>
+      <div class="filter-group">
+        <label><input type="checkbox" data-source-filter="background" checked /> Background</label>
+        <label><input type="checkbox" data-source-filter="sidepanel" checked /> Sidepanel</label>
+        <label><input type="checkbox" data-source-filter="content" checked /> Content</label>
+      </div>
+      <div class="filter-group">
+        <label><input type="checkbox" data-level-filter="log" checked /> Log</label>
+        <label><input type="checkbox" data-level-filter="info" checked /> Info</label>
+        <label><input type="checkbox" data-level-filter="warn" checked /> Warn</label>
+        <label><input type="checkbox" data-level-filter="error" checked /> Error</label>
+      </div>
+      <input type="search" id="search-input" placeholder="Filter by prefix or data..." />
+      <button id="pause-button">Pause</button>
+      <button id="clear-button">Clear</button>
+      <span id="count-label">0 entries</span>
+    </header>
+    <div id="log-container">
+      <div id="empty-state">Waiting for logs from background, sidepanel and content script...</div>
+    </div>
+    <script src="debug.js"></script>
+  </body>
+</html>
