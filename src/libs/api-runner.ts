@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { maybeRefreshAuthToken, refreshAuthToken } from "@/libs/auth";
 import { API_BASE_URL } from "@/libs/constants";
+import { logger } from "@/libs/logger";
 import type { SeriousErrorPayload } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
@@ -16,6 +17,23 @@ export interface ApiRequestPayload {
 export type ApiRunResult =
   | { ok: true; status: number; data: unknown }
   | { ok: false; status: number; data: unknown };
+
+const SENSITIVE_KEY_PATTERN =
+  /token|password|secret|authorization|api[-_]?key|cookie/i;
+
+function redactSensitive(value: unknown, depth = 4): unknown {
+  if (depth <= 0 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSensitive(item, depth - 1));
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    result[key] = SENSITIVE_KEY_PATTERN.test(key)
+      ? "[redacted]"
+      : redactSensitive(val, depth - 1);
+  }
+  return result;
+}
 
 const axiosApi = axios.create({ baseURL: API_BASE_URL, adapter: "fetch" });
 
@@ -119,6 +137,7 @@ export async function runApiRequest(
   payload: ApiRequestPayload,
 ): Promise<ApiRunResult> {
   const { method, path, body, headers } = payload;
+  logger.log("api:request", { method, path, body: redactSensitive(body) });
   try {
     const response = await axiosApi.request({
       method,
@@ -126,15 +145,32 @@ export async function runApiRequest(
       data: method === "get" || method === "delete" ? undefined : body,
       headers,
     });
+    logger.log("api:response", {
+      method,
+      path,
+      status: response.status,
+      data: redactSensitive(response.data),
+    });
     return { ok: true, status: response.status, data: response.data };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
+      logger.warn("api:response-error", {
+        method,
+        path,
+        status: err.response.status,
+        data: redactSensitive(err.response.data),
+      });
       return {
         ok: false,
         status: err.response.status,
         data: err.response.data,
       };
     }
+    logger.error("api:network-error", {
+      method,
+      path,
+      message: err instanceof Error ? err.message : String(err),
+    });
     return {
       ok: false,
       status: 0,

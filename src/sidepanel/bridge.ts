@@ -175,16 +175,39 @@ export function setupIframeBridge(
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
-    if (!("vigogh-ai-button-enabled" in changes)) return;
-    const enabled =
-      (changes["vigogh-ai-button-enabled"].newValue as boolean | undefined) ??
-      true;
-    try {
-      iframe.contentWindow?.postMessage(
-        { type: "VIGOGH_AI_BUTTON_ENABLED", enabled },
-        targetOrigin,
-      );
-    } catch {}
+
+    if ("vigogh-ai-button-enabled" in changes) {
+      const enabled =
+        (changes["vigogh-ai-button-enabled"].newValue as
+          | boolean
+          | undefined) ?? true;
+      try {
+        iframe.contentWindow?.postMessage(
+          { type: "VIGOGH_AI_BUTTON_ENABLED", enabled },
+          targetOrigin,
+        );
+      } catch {}
+    }
+
+    if ("vigogh-pending-custom-token" in changes) {
+      const customToken = changes["vigogh-pending-custom-token"].newValue as
+        | string
+        | undefined;
+      if (customToken) {
+        chrome.storage.local
+          .remove([
+            "vigogh-pending-custom-token",
+            "vigogh-pending-custom-token-expires-at",
+          ])
+          .catch(() => {});
+        try {
+          iframe.contentWindow?.postMessage(
+            { type: "VIGOGH_CUSTOM_TOKEN", token: customToken },
+            targetOrigin,
+          );
+        } catch {}
+      }
+    }
   });
 
   window.addEventListener(

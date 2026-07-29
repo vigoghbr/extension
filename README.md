@@ -23,7 +23,7 @@ Three layers, each with a narrow responsibility:
 - **Side panel** — a thin shell hosting an iframe that loads the Vigogh web app. A bridge module relays messages between the iframe (`postMessage`) and the background worker (`chrome.runtime`).
 - **Content script** — bootstraps in-page tools (autocomplete, answers, text transforms) inside a shadow DOM, so extension styles never leak into or out of the host page.
 
-All authentication, API calls, and UI logic live in the Vigogh web app, loaded inside the side panel's iframe. The extension itself is intentionally a bridge, not a client application: it captures data, forwards it, and applies the result. This keeps the codebase you're reading small enough to actually audit.
+All authentication, API calls, and most UI logic live in the Vigogh web app, loaded inside the side panel's iframe. The extension itself is intentionally a bridge, not a client application: it captures data, forwards it, and applies the result. This keeps the codebase you're reading small enough to actually audit.
 
 ## Permissions
 

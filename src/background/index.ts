@@ -1,4 +1,4 @@
-import { STATIC_BASE_URL } from "@/libs/constants";
+import { BASE_URL, STATIC_BASE_URL } from "@/libs/constants";
 import { initLogger, logger } from "@/libs/logger";
 import type {
   ExtensionLocales,
@@ -48,6 +48,29 @@ if (__DEV__) {
   }
 
   pollReload();
+}
+
+async function persistAuthToken(message: {
+  token: string;
+  refreshToken?: string;
+  customToken?: string;
+}): Promise<void> {
+  const { token, refreshToken, customToken } = message;
+  const toStore: Record<string, unknown> = { "vigogh-auth-token": token };
+  if (refreshToken) toStore["vigogh-auth-refresh-token"] = refreshToken;
+  if (customToken) {
+    toStore["vigogh-pending-custom-token"] = customToken;
+    toStore["vigogh-pending-custom-token-expires-at"] =
+      Date.now() + 5 * 60 * 1000;
+  }
+  toStore["vigogh-auth-token-expires-at"] = Date.now() + 60 * 60 * 1000;
+
+  await chrome.storage.local.set(toStore);
+  logger.info("auth:token-set", {
+    hasRefreshToken: !!refreshToken,
+    hasCustomToken: !!customToken,
+  });
+  fetchAndCacheConfig().catch(() => {});
 }
 
 async function fetchAndCacheConfig(): Promise<void> {
@@ -277,28 +300,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "set_auth_token") {
-    const refreshToken: string | undefined = message.refreshToken;
-    const customToken: string | undefined = message.customToken;
-    const toStore: Record<string, unknown> = {
-      "vigogh-auth-token": message.token,
-    };
-    if (refreshToken) toStore["vigogh-auth-refresh-token"] = refreshToken;
-    if (customToken) {
-      toStore["vigogh-pending-custom-token"] = customToken;
-      toStore["vigogh-pending-custom-token-expires-at"] =
-        Date.now() + 5 * 60 * 1000;
-    }
-    toStore["vigogh-auth-token-expires-at"] = Date.now() + 60 * 60 * 1000;
-    chrome.storage.local
-      .set(toStore)
-      .then(() => {
-        logger.info("auth:token-set", {
-          hasRefreshToken: !!refreshToken,
-          hasCustomToken: !!customToken,
-        });
-        fetchAndCacheConfig().catch(() => {});
-        sendResponse({ success: true });
-      })
+    persistAuthToken(message)
+      .then(() => sendResponse({ success: true }))
       .catch(() => sendResponse({ success: false }));
     return true;
   }
@@ -468,6 +471,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   for (const handler of toolHandlers) {
     const result = handler(message as ExtensionMessage, sender, sendResponse);
     if (result !== null) return result;
+  }
+
+  return false;
+});
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (sender.origin !== BASE_URL) {
+    sendResponse({ success: false });
+    return false;
+  }
+
+  if (message.action === "set_auth_token") {
+    persistAuthToken(message)
+      .then(() => sendResponse({ success: true }))
+      .catch(() => sendResponse({ success: false }));
+    return true;
   }
 
   return false;
