@@ -10,6 +10,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { extensionStore } from "@/stores/extensionStore";
@@ -83,6 +84,8 @@ export function FilesPopover({
   );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.files);
   const [dragging, setDragging] = useState<string | null>(null);
+  const [isFileOver, setIsFileOver] = useState(false);
+  const dragDepthRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -93,6 +96,38 @@ export function FilesPopover({
     const file = e.target.files?.[0];
     if (file) uploadFile(file);
     e.target.value = "";
+  }
+
+  function isOSFileDrag(e: DragEvent<HTMLDivElement>): boolean {
+    return e.dataTransfer.types.includes("Files");
+  }
+
+  function handleListDragEnter(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    if (!isOSFileDrag(e)) return;
+    dragDepthRef.current += 1;
+    setIsFileOver(true);
+  }
+
+  function handleListDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    if (!isOSFileDrag(e)) return;
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleListDragLeave(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    if (!isOSFileDrag(e)) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsFileOver(false);
+  }
+
+  function handleListDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setIsFileOver(false);
+    if (!isOSFileDrag(e)) return;
+    Array.from(e.dataTransfer.files).forEach(uploadFile);
   }
 
   if (!windowDims) return null;
@@ -123,7 +158,21 @@ export function FilesPopover({
         onChange={handleFileChange}
       />
 
-      <div className="py-1 flex-1 overflow-y-auto">
+      <div
+        className="py-1 flex-1 overflow-y-auto rounded-md transition-colors"
+        style={
+          isFileOver
+            ? {
+                boxShadow: `inset 0 0 0 1px ${colors.itemSecondaryHoverBackground}`,
+                background: colors.itemSecondaryHoverBackground,
+              }
+            : undefined
+        }
+        onDragEnter={handleListDragEnter}
+        onDragOver={handleListDragOver}
+        onDragLeave={handleListDragLeave}
+        onDrop={handleListDrop}
+      >
         {status === "loading" && items.length === 0 && (
           <div className="py-4 px-3 flex flex-col gap-2">
             {[1, 2, 3].map((i) => (
