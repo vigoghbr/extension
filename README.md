@@ -41,24 +41,24 @@ No `<all_urls>` content script runs by default. Broader host access, when needed
 
 ## Getting started
 
-Requirements: Node version pinned in `.nvmrc`, Yarn.
+Requirements: Node version pinned in `.nvmrc`, npm.
 
 ```bash
-yarn install
-yarn dev
+npm install
+npm run dev
 ```
 
-`yarn dev` builds in watch mode against a local development backend. Load the `dist/` folder as an unpacked extension via `chrome://extensions` (enable Developer mode first).
+`npm run dev` builds in watch mode against a local development backend. Load the `dist/` folder as an unpacked extension via `chrome://extensions` (enable Developer mode first).
 
 Other useful scripts:
 
 ```bash
-yarn typecheck   # TypeScript, no emit
-yarn lint        # Biome lint
-yarn format      # Biome format
+npm run typecheck   # TypeScript, no emit
+npm run lint        # Biome lint
+npm run format      # Biome format
 ```
 
-Never run the production build (`yarn build`) during local development, it points the extension at production URLs.
+Never run the production build (`npm run build`) during local development, it points the extension at production URLs.
 
 ## Contributing
 

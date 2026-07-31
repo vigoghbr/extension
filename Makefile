@@ -10,10 +10,10 @@ version:
 	@:
 
 lint:
-	yarn lint:fix
+	npm run lint:fix
 
 build: lint
-	yarn build
+	npm run build
 
 zip: build
 	cd dist && zip -r ../extension.zip .

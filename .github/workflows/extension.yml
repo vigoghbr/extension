@@ -23,12 +23,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: 'yarn.lock'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
         working-directory: .
-        run: yarn
+        run: npm ci
 
       - name: Build
         working-directory: .
