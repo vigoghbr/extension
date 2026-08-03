@@ -11,3 +11,8 @@ export const API_BASE_URL = __DEV__
   : "https://api.vigogh.com";
 
 export const SIDEPANEL_URL = `${BASE_URL}/sidepanel`;
+
+export const ALLOWED_EXTERNAL_MESSAGE_ORIGINS = [
+  "https://vigogh.com",
+  "http://localhost:4321",
+];

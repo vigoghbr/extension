@@ -1,4 +1,7 @@
-import { BASE_URL, STATIC_BASE_URL } from "@/libs/constants";
+import {
+  ALLOWED_EXTERNAL_MESSAGE_ORIGINS,
+  STATIC_BASE_URL,
+} from "@/libs/constants";
 import { initLogger, logger } from "@/libs/logger";
 import type {
   ExtensionLocales,
@@ -476,21 +479,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  if (sender.origin !== BASE_URL) {
-    sendResponse({ success: false });
+function isAllowedExternalOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  if (ALLOWED_EXTERNAL_MESSAGE_ORIGINS.includes(origin)) return true;
+  return origin.startsWith("https://") && origin.endsWith(".vigogh.com");
+}
+
+chrome.runtime.onMessageExternal.addListener(
+  (message, sender, sendResponse) => {
+    if (!isAllowedExternalOrigin(sender.origin)) {
+      logger.warn("auth:external-origin-rejected", {
+        origin: sender.origin,
+        action: message?.action,
+      });
+      sendResponse({ success: false });
+      return false;
+    }
+
+    if (message.action === "set_auth_token") {
+      persistAuthToken(message)
+        .then(() => sendResponse({ success: true }))
+        .catch(() => sendResponse({ success: false }));
+      return true;
+    }
+
     return false;
-  }
-
-  if (message.action === "set_auth_token") {
-    persistAuthToken(message)
-      .then(() => sendResponse({ success: true }))
-      .catch(() => sendResponse({ success: false }));
-    return true;
-  }
-
-  return false;
-});
+  },
+);
 
 chrome.runtime.onStartup.addListener(() => {
   maybeRefreshAuthToken().catch(() => {});
