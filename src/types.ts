@@ -149,7 +149,7 @@ export interface SeriousErrorToastMessage {
   payload: SeriousErrorPayload;
 }
 
-export type DebugLogLevel = "log" | "info" | "warn" | "error";
+export type DebugLogLevel = "info" | "debug" | "warn" | "error";
 export type DebugLogSource = "background" | "sidepanel" | "content";
 
 export interface DebugLogEntry {

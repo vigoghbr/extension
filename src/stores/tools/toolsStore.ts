@@ -100,10 +100,10 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
           try {
             result[field] = await blobUrlToBase64(value);
           } catch (error) {
-            logger.log("answers:blob-fetch-failed", {
+            logger.warn("answers:blob-fetch-failed", {
               field,
               url: value,
-              error: String(error),
+              error,
             });
           }
         }
@@ -200,7 +200,7 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
     })
     .catch((error) => {
       toast.dismiss(toastId);
-      logger.log("answers:extract-failed", { error: String(error) });
+      logger.error("answers:extract-failed", { error });
       handleToolError();
     });
 }

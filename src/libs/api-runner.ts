@@ -137,7 +137,7 @@ export async function runApiRequest(
   payload: ApiRequestPayload,
 ): Promise<ApiRunResult> {
   const { method, path, body, headers } = payload;
-  logger.log("api:request", { method, path, body: redactSensitive(body) });
+  logger.debug("api:request", { method, path, body: redactSensitive(body) });
   try {
     const response = await axiosApi.request({
       method,
@@ -145,7 +145,7 @@ export async function runApiRequest(
       data: method === "get" || method === "delete" ? undefined : body,
       headers,
     });
-    logger.log("api:response", {
+    logger.debug("api:response", {
       method,
       path,
       status: response.status,
@@ -166,11 +166,7 @@ export async function runApiRequest(
         data: err.response.data,
       };
     }
-    logger.error("api:network-error", {
-      method,
-      path,
-      message: err instanceof Error ? err.message : String(err),
-    });
+    logger.error("api:network-error", { method, path, error: err });
     return {
       ok: false,
       status: 0,

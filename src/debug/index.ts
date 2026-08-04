@@ -8,7 +8,7 @@ const sourceFilters = new Set<DebugLogSource>([
   "sidepanel",
   "content",
 ]);
-const levelFilters = new Set<DebugLogLevel>(["log", "info", "warn", "error"]);
+const levelFilters = new Set<DebugLogLevel>(["info", "debug", "warn", "error"]);
 let searchText = "";
 let paused = false;
 

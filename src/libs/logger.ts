@@ -5,6 +5,7 @@ import {
   defaultStackParser,
   makeFetchTransport,
   Scope,
+  logger as sentryLog,
 } from "@sentry/browser";
 import type { DebugLogEntry, DebugLogLevel, DebugLogSource } from "@/types";
 
@@ -22,9 +23,10 @@ const SENTRY_DSN =
 const SENTRY_TUNNEL = "https://api.vigogh.com/v1/sentry";
 
 const RUNTIME_ACTION = {
-  log: "logger_log",
-  message: "logger_message",
-  capture: "logger_capture",
+  info: "logger_info",
+  debug: "logger_debug",
+  warn: "logger_warn",
+  error: "logger_error",
 } as const;
 
 let scope: Scope | null = null;
@@ -71,7 +73,10 @@ function captureExceptionLocal(
   } catch {}
 }
 
-function captureMessageLocal(
+type LogSeverity = "debug" | "info" | "warn" | "error";
+
+function captureLogLocal(
+  severity: LogSeverity,
   message: string,
   prefix?: string,
   extra?: LogData,
@@ -79,9 +84,16 @@ function captureMessageLocal(
   if (!scope) return;
   try {
     const isolated = scope.clone();
-    applyContext(isolated, prefix, extra);
-    isolated.captureMessage(message, "info");
+    if (prefix) isolated.setTag("prefix", prefix);
+    sentryLog[severity](message, extra, { scope: isolated });
   } catch {}
+}
+
+function deserializeError(serialized: Partial<SerializedError>): Error {
+  const err = new Error(serialized.message ?? "Unknown error");
+  err.name = serialized.name ?? "Error";
+  if (serialized.stack) err.stack = serialized.stack;
+  return err;
 }
 
 function isExtensionContextValid(): boolean {
@@ -161,47 +173,55 @@ export function logRemoteEntry(
 }
 
 export const logger = {
-  log(prefix: string, data?: LogData): void {
-    if (__DEV__) console.log(prefix, data ?? {});
-    broadcastDebugLog("log", prefix, data);
-    if (scope) return;
-    sendToRuntime(RUNTIME_ACTION.log, { prefix, data: data ?? {} });
-  },
   info(prefix: string, data?: LogData): void {
     if (__DEV__) console.log(prefix, data ?? {});
     broadcastDebugLog("info", prefix, data);
     if (scope) {
-      captureMessageLocal(prefix, prefix, data);
+      captureLogLocal("info", prefix, prefix, data);
       return;
     }
-    sendToRuntime(RUNTIME_ACTION.message, { prefix, extra: data });
+    sendToRuntime(RUNTIME_ACTION.info, { prefix, data });
+  },
+  debug(prefix: string, data?: LogData): void {
+    if (__DEV__) console.log(prefix, data ?? {});
+    broadcastDebugLog("debug", prefix, data);
+    if (scope) {
+      captureLogLocal("debug", prefix, prefix, data);
+      return;
+    }
+    sendToRuntime(RUNTIME_ACTION.debug, { prefix, data: data ?? {} });
   },
   warn(prefix: string, data?: LogData): void {
     if (__DEV__) console.warn(prefix, data ?? {});
     broadcastDebugLog("warn", prefix, data);
-    if (data?.error === undefined) return;
+    const extra = omitError(data);
     if (scope) {
-      captureExceptionLocal(data.error, prefix, omitError(data));
+      captureLogLocal("warn", prefix, prefix, extra);
+      if (data?.error !== undefined) {
+        captureExceptionLocal(data.error, prefix, extra);
+      }
       return;
     }
-    sendToRuntime(RUNTIME_ACTION.capture, {
-      ...serializeError(data.error),
+    sendToRuntime(RUNTIME_ACTION.warn, {
       prefix,
-      extra: omitError(data),
+      extra,
+      error: data?.error !== undefined ? serializeError(data.error) : undefined,
     });
   },
   error(prefix: string, data?: LogData): void {
     if (__DEV__) console.error(prefix, data ?? {});
     broadcastDebugLog("error", prefix, data);
+    const extra = omitError(data);
     const error = data?.error ?? new Error(prefix);
     if (scope) {
-      captureExceptionLocal(error, prefix, omitError(data));
+      captureLogLocal("error", prefix, prefix, extra);
+      captureExceptionLocal(error, prefix, extra);
       return;
     }
-    sendToRuntime(RUNTIME_ACTION.capture, {
+    sendToRuntime(RUNTIME_ACTION.error, {
       ...serializeError(error),
       prefix,
-      extra: omitError(data),
+      extra,
     });
   },
 };
@@ -233,26 +253,34 @@ function installRuntimeListener(): void {
     if (sender.id !== chrome.runtime.id) return false;
     const action = message?.action;
     const payload = message?.payload ?? {};
-    if (action === RUNTIME_ACTION.log) {
-      console.log(payload.prefix, payload.data ?? {});
-      return false;
+    switch (action) {
+      case RUNTIME_ACTION.info:
+        captureLogLocal("info", payload.prefix, payload.prefix, payload.data);
+        return false;
+      case RUNTIME_ACTION.debug:
+        captureLogLocal("debug", payload.prefix, payload.prefix, payload.data);
+        return false;
+      case RUNTIME_ACTION.warn:
+        captureLogLocal("warn", payload.prefix, payload.prefix, payload.extra);
+        if (payload.error) {
+          captureExceptionLocal(
+            deserializeError(payload.error),
+            payload.prefix,
+            payload.extra,
+          );
+        }
+        return false;
+      case RUNTIME_ACTION.error:
+        captureLogLocal("error", payload.prefix, payload.prefix, payload.extra);
+        captureExceptionLocal(
+          deserializeError(payload),
+          payload.prefix,
+          payload.extra,
+        );
+        return false;
+      default:
+        return false;
     }
-    if (action === RUNTIME_ACTION.message) {
-      captureMessageLocal(
-        payload.prefix ?? "info",
-        payload.prefix,
-        payload.extra,
-      );
-      return false;
-    }
-    if (action === RUNTIME_ACTION.capture) {
-      const err = new Error(payload.message ?? "Unknown error");
-      err.name = payload.name ?? "Error";
-      if (payload.stack) err.stack = payload.stack;
-      captureExceptionLocal(err, payload.prefix, payload.extra);
-      return false;
-    }
-    return false;
   });
 }
 
