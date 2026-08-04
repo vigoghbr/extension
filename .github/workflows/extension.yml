@@ -1,8 +1,6 @@
 name: Build Extension
 on:
   push:
-    paths:
-      - '*'
     branches:
       - master
 
