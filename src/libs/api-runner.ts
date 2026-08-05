@@ -18,23 +18,6 @@ export type ApiRunResult =
   | { ok: true; status: number; data: unknown }
   | { ok: false; status: number; data: unknown };
 
-const SENSITIVE_KEY_PATTERN =
-  /token|password|secret|authorization|api[-_]?key|cookie/i;
-
-function redactSensitive(value: unknown, depth = 4): unknown {
-  if (depth <= 0 || value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) {
-    return value.map((item) => redactSensitive(item, depth - 1));
-  }
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    result[key] = SENSITIVE_KEY_PATTERN.test(key)
-      ? "[redacted]"
-      : redactSensitive(val, depth - 1);
-  }
-  return result;
-}
-
 const axiosApi = axios.create({ baseURL: API_BASE_URL, adapter: "fetch" });
 
 function extractErrorCode(data: unknown): string | null {
@@ -137,7 +120,7 @@ export async function runApiRequest(
   payload: ApiRequestPayload,
 ): Promise<ApiRunResult> {
   const { method, path, body, headers } = payload;
-  logger.debug("api:request", { method, path, body: redactSensitive(body) });
+  logger.debug("api:request", { method, path });
   try {
     const response = await axiosApi.request({
       method,
@@ -149,7 +132,6 @@ export async function runApiRequest(
       method,
       path,
       status: response.status,
-      data: redactSensitive(response.data),
     });
     return { ok: true, status: response.status, data: response.data };
   } catch (err) {
@@ -158,7 +140,6 @@ export async function runApiRequest(
         method,
         path,
         status: err.response.status,
-        data: redactSensitive(err.response.data),
       });
       return {
         ok: false,
