@@ -145,7 +145,7 @@ export function extractPageDataInPage(
             .value || "",
         ),
       );
-      if (type === "hidden") return;
+      if (type === "hidden" || type === "password") return;
       if (!label && !placeholder) return;
       const identifier = label || placeholder;
       fields.push(`[${type}] ${identifier}: "${value}"`);
