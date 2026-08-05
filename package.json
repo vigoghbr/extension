@@ -1,6 +1,6 @@
 {
   "name": "@vigogh/extension",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "private": true,
   "dependencies": {
     "@sentry/browser": "^10.67.0",
