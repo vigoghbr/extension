@@ -1,3 +1,4 @@
+import { logger } from "@/libs/logger";
 import type { ExtensionSettings } from "@/types";
 
 export async function captureActiveTab(
@@ -29,14 +30,18 @@ export async function captureActiveTab(
       .sendMessage(tabId, { action: "restore_after_capture" })
       .catch(() => {});
     if (!screenshot) {
-      console.error("capture:empty_screenshot", { tabId, windowId });
+      logger.error("capture:empty-screenshot", {
+        tabId,
+        windowId,
+        error: new Error("captureVisibleTab resolved with an empty screenshot"),
+      });
     }
     return screenshot || "";
   } catch (error) {
-    console.error("capture:capture_visible_tab_failed", {
+    logger.error("capture:capture-visible-tab-failed", {
       tabId,
       windowId,
-      error: error instanceof Error ? error.message : String(error),
+      error,
       lastError: chrome.runtime.lastError?.message,
     });
     chrome.tabs

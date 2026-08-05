@@ -1,7 +1,6 @@
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
-import { logger } from "@/libs/logger";
 import type { AutocompleteResponse } from "@/types";
 
 async function handleAutocompleteRequest(
@@ -29,8 +28,7 @@ async function handleAutocompleteRequest(
       completion: data.data?.completion || "",
       toolUsageId: data.data?.toolUsageId,
     };
-  } catch (error) {
-    logger.error("autocomplete:request", { error });
+  } catch {
     return { success: false, error: "API error", reason: "api_error" };
   }
 }
@@ -40,7 +38,7 @@ async function handleAutocompleteAccept(toolUsageId: string): Promise<void> {
   if (!stored["vigogh-auth-token"]) return;
   api
     .post(getEndpoint("autocompleteAccept"), { toolUsageId })
-    .catch((error) => logger.error("autocomplete:accept", { error }));
+    .catch(() => {});
 }
 
 export const handleMessages: BackgroundMessageHandler = (

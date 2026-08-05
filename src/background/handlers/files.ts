@@ -1,9 +1,11 @@
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
 import api, {
+  ApiError,
   extractApiErrorCode,
   isUnauthorizedError,
 } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
+import { logger } from "@/libs/logger";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -61,7 +63,9 @@ export const handleMessages: BackgroundMessageHandler = (
         });
         sendResponse({ success: true, pending: true });
       } catch (error) {
-        console.log("files_upload:error", error);
+        if (!(error instanceof ApiError)) {
+          logger.error("files:upload-error", { error });
+        }
         respondFromApiError(error, sendResponse);
       }
     })();
@@ -87,7 +91,7 @@ export const handleMessages: BackgroundMessageHandler = (
         const buffer = await fileResponse.arrayBuffer();
         sendResponse({ success: true, base64: arrayBufferToBase64(buffer) });
       } catch (error) {
-        console.log("files_fetch_blob:error", error);
+        logger.error("files:fetch-blob-error", { error });
         respondFromApiError(error, sendResponse);
       }
     })();

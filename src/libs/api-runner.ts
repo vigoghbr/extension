@@ -136,18 +136,12 @@ export async function runApiRequest(
     return { ok: true, status: response.status, data: response.data };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
-      logger.warn("api:response-error", {
-        method,
-        path,
-        status: err.response.status,
-      });
       return {
         ok: false,
         status: err.response.status,
         data: err.response.data,
       };
     }
-    logger.error("api:network-error", { method, path, error: err });
     return {
       ok: false,
       status: 0,

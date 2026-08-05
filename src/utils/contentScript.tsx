@@ -258,7 +258,7 @@ if (!(window as any).__vigoghInit) {
             const item = JSON.parse(fileData) as AttachableFile;
             void triggerAttach(item);
           } catch (error) {
-            console.log("files:drop:parse_error", error);
+            logger.error("files:drop:parse-error", { error });
           }
           return;
         }

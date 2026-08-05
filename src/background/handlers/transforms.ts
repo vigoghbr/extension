@@ -4,6 +4,7 @@ import api, {
   isUnauthorizedError,
 } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
+import { logger } from "@/libs/logger";
 import type { ToolResponse } from "@/types";
 
 async function handleTextTransformRequest(
@@ -138,7 +139,7 @@ export const handleMessages: BackgroundMessageHandler = (
     handleTextTransformRequest(message.text, message.transformAction)
       .then(sendResponse)
       .catch((error: Error) => {
-        console.error("Background: Transforms request failed:", error);
+        logger.error("transforms:request-failed", { error });
         sendResponse({ success: false, error: error.message });
       });
     return true;
@@ -147,10 +148,7 @@ export const handleMessages: BackgroundMessageHandler = (
     handleSidepanelTextTransform(message.transformAction)
       .then(sendResponse)
       .catch((error: Error) => {
-        console.error(
-          "Background: Sidepanel transforms request failed:",
-          error,
-        );
+        logger.error("transforms:sidepanel-request-failed", { error });
         sendResponse({ success: false, error: error.message });
       });
     return true;

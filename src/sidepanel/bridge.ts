@@ -68,8 +68,7 @@ function sendDataToIframe(
       targetOrigin,
     );
   } catch (error) {
-    console.error("Sidepanel: Error sending data to iframe:", error);
-    logger.error("sidepanel:bridge", { error });
+    logger.error("sidepanel:bridge:send-data-failed", { error });
   }
 }
 
@@ -79,18 +78,17 @@ function captureAndSend(iframe: HTMLIFrameElement, targetOrigin: string): void {
       { action: "capture_page" as const },
       (response: { success: boolean; data: PageSessionData | null }) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            "Sidepanel: Error capturing page:",
-            chrome.runtime.lastError,
-          );
-          logger.error("sidepanel:bridge", {
+          logger.error("sidepanel:bridge:capture-runtime-error", {
             error: new Error(chrome.runtime.lastError.message),
           });
           return;
         }
 
         if (!response?.success || !response.data) {
-          console.error("Sidepanel: Capture failed or no data returned");
+          logger.warn("sidepanel:bridge:capture-empty", {
+            success: response?.success,
+            hasData: !!response?.data,
+          });
           return;
         }
 
@@ -98,8 +96,7 @@ function captureAndSend(iframe: HTMLIFrameElement, targetOrigin: string): void {
       },
     );
   } catch (error) {
-    console.error("Sidepanel: Failed to capture page:", error);
-    logger.error("sidepanel:bridge", { error });
+    logger.error("sidepanel:bridge:capture-failed", { error });
   }
 }
 
@@ -144,7 +141,7 @@ export function setupIframeBridge(
         sendPinnedStatus(settings.isOnToolbar);
       })
       .catch((error) => {
-        logger.error("sidepanel:bridge", { error });
+        logger.error("sidepanel:bridge:pinned-status-failed", { error });
       });
   }
 
@@ -307,10 +304,9 @@ export function setupIframeBridge(
           { action: "set_auth_token" as const, token, refreshToken },
           () => {
             if (chrome.runtime.lastError) {
-              console.error(
-                "Sidepanel: Error setting auth token:",
-                chrome.runtime.lastError,
-              );
+              logger.error("sidepanel:bridge:set-auth-token-failed", {
+                error: new Error(chrome.runtime.lastError.message),
+              });
             }
           },
         );
@@ -321,10 +317,9 @@ export function setupIframeBridge(
           { action: "clear_auth_token" as const },
           () => {
             if (chrome.runtime.lastError) {
-              console.error(
-                "Sidepanel: Error clearing auth token:",
-                chrome.runtime.lastError,
-              );
+              logger.error("sidepanel:bridge:clear-auth-token-failed", {
+                error: new Error(chrome.runtime.lastError.message),
+              });
             }
           },
         );
@@ -369,7 +364,7 @@ export function setupIframeBridge(
           },
           () => {
             if (chrome.runtime.lastError) {
-              logger.error("sidepanel:bridge", {
+              logger.error("sidepanel:bridge:set-feature-flags-failed", {
                 error: new Error(chrome.runtime.lastError.message),
               });
             }
@@ -382,7 +377,7 @@ export function setupIframeBridge(
           { action: "indicator_event" as const, indicator, show },
           () => {
             if (chrome.runtime.lastError) {
-              logger.error("sidepanel:bridge", {
+              logger.error("sidepanel:bridge:indicator-event-failed", {
                 error: new Error(chrome.runtime.lastError.message),
               });
             }
@@ -437,7 +432,7 @@ export function setupIframeBridge(
           },
           () => {
             if (chrome.runtime.lastError) {
-              logger.error("sidepanel:bridge", {
+              logger.error("sidepanel:bridge:set-tool-preferences-failed", {
                 error: new Error(chrome.runtime.lastError.message),
               });
             }
@@ -493,7 +488,7 @@ export function setupIframeBridge(
           },
           () => {
             if (chrome.runtime.lastError) {
-              logger.error("sidepanel:bridge", {
+              logger.error("sidepanel:bridge:set-ai-button-enabled-failed", {
                 error: new Error(chrome.runtime.lastError.message),
               });
             }

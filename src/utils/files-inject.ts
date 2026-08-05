@@ -1,3 +1,4 @@
+import { logger } from "@/libs/logger";
 import { extensionStore, getActiveStrategy } from "@/stores/extensionStore";
 import type { SiteFileAttachStrategy } from "@/types";
 
@@ -119,7 +120,7 @@ function tryFileInput(
   const input = findFileInput(selector, file.type);
   if (!input) return false;
   setFileInput(input, file);
-  console.log("files:inject", { path: "file_input", selector });
+  if (__DEV__) logger.debug("files:inject", { path: "file_input", selector });
   return true;
 }
 
@@ -131,11 +132,11 @@ function tryPaste(file: File): boolean {
   try {
     const ok = strategy.pasteFile(currentEditor as HTMLElement, file);
     if (ok) {
-      console.log("files:inject", { path: "paste" });
+      if (__DEV__) logger.debug("files:inject", { path: "paste" });
       return true;
     }
   } catch (error) {
-    console.log("files:inject:paste_error", error);
+    logger.error("files:inject:paste-error", { error });
   }
   return false;
 }
@@ -172,7 +173,7 @@ function tryDragDrop(
   const consumed = !target.dispatchEvent(dropEvent);
   target.dispatchEvent(buildDragEvent("dragend", dt));
 
-  console.log("files:inject", { path: "drag_drop", consumed });
+  if (__DEV__) logger.debug("files:inject", { path: "drag_drop", consumed });
   return consumed;
 }
 
@@ -186,10 +187,10 @@ async function tryClipboard(blob: Blob, mimeType: string): Promise<boolean> {
     const hintMessage = config?.aiMenu.vigoghMenu?.filesPasteHint ?? "";
     const dismissMs = config?.behavior.filesPasteHintDismissMs ?? 3000;
     showPasteHint(target, hintMessage, dismissMs);
-    console.log("files:inject", { path: "clipboard" });
+    if (__DEV__) logger.debug("files:inject", { path: "clipboard" });
     return true;
   } catch (error) {
-    console.log("files:inject:clipboard_error", error);
+    logger.error("files:inject:clipboard-error", { error });
     return false;
   }
 }
@@ -214,6 +215,6 @@ export async function attachFileToPage(
     }
   }
 
-  console.log("files:inject", { path: "noop" });
+  if (__DEV__) logger.debug("files:inject", { path: "noop" });
   return false;
 }

@@ -1,6 +1,5 @@
 import {
   BrowserClient,
-  consoleLoggingIntegration,
   dedupeIntegration,
   defaultStackParser,
   makeFetchTransport,
@@ -39,10 +38,7 @@ function buildSentryScope(): Scope {
     tunnel: SENTRY_TUNNEL,
     transport: makeFetchTransport,
     stackParser: defaultStackParser,
-    integrations: [
-      consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
-      dedupeIntegration(),
-    ],
+    integrations: [dedupeIntegration()],
     enableLogs: true,
   });
   const next = new Scope();

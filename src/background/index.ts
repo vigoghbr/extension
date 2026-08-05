@@ -118,7 +118,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 async function capturePageData(tabId: number, windowId: number): Promise<void> {
-  if (__DEV__) console.log("Background: Starting page data capture...");
+  if (__DEV__) logger.debug("background:capture-page:start");
 
   const stored = await chrome.storage.local
     .get("vigogh-settings")
@@ -152,8 +152,7 @@ async function capturePageData(tabId: number, windowId: number): Promise<void> {
   };
 
   if (__DEV__) {
-    console.log("Background: Page data ready:", {
-      pageURL: pageData.pageURL,
+    logger.debug("background:capture-page:ready", {
       pageContentLength: pageData.pageContent.length,
       pageMetadataLength: pageData.pageMetadata.length,
       pageFormsLength: pageData.pageForms.length,
@@ -205,7 +204,7 @@ chrome.action.onClicked.addListener((tab) => {
   if (!tab.id) return;
   const tabId = tab.id;
   const windowId = tab.windowId;
-  logger.info("background:action-click", { tabId, url: tab.url ?? "" });
+  logger.info("background:action-click", { tabId });
 
   void handleActionClick(tabId, windowId);
 });
@@ -279,7 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
   if (message.action === "capture_page") {
-    if (__DEV__) console.log("Background: capture_page request received");
+    if (__DEV__) logger.debug("background:capture-page:request-received");
 
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       const tab = tabs?.[0];

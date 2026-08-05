@@ -124,12 +124,11 @@ async function dispatch<T>(
   if (!result.ok) {
     const error = new ApiError({ status: result.status, data: result.data });
     if (!isUnauthorizedError(error)) {
-      logger.error("api:request-failed", {
-        method,
-        path,
-        status: result.status,
-        error,
-      });
+      if (result.status === 0) {
+        logger.error("api:network-error", { method, path, error });
+      } else {
+        logger.warn("api:response-error", { method, path, status: result.status });
+      }
     }
     showErrorToast(error);
     throw error;

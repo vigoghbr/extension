@@ -9,7 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const iframe = document.querySelector<HTMLIFrameElement>("iframe");
 
   if (!iframe) {
-    console.error("Sidepanel: No iframe found in document!");
+    logger.error("sidepanel:no-iframe", {
+      error: new Error("Sidepanel iframe not found in document"),
+    });
     return;
   }
 
