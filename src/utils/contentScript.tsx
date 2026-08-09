@@ -51,7 +51,13 @@ if (!(window as any).__vigoghInit) {
       onCaughtError: (error) => logger.error("react:caught", { error }),
     }).render(<App />);
 
-    loadConfig();
+    loadConfig(() => {
+      requestAnimationFrame(() => {
+        emitNeutralToastr("AUTOCOMPLETE_ENABLED", {
+          id: "vigogh-autocomplete-restored",
+        });
+      });
+    });
     void initSessionCache();
     initIndicatorListener();
     setupListeners(host);

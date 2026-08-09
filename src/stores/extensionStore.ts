@@ -493,7 +493,7 @@ export function resolveConfig(
   };
 }
 
-export function loadConfig(): void {
+export function loadConfig(onAutocompleteRestored?: () => void): void {
   chrome.storage.local
     .get<{
       "vigogh-settings"?: ExtensionSettings;
@@ -502,6 +502,7 @@ export function loadConfig(): void {
       "vigogh-tool-preferences"?: UserToolPreferences;
       "vigogh-ai-button-appearance"?: AiButtonAppearance;
       "vigogh-ai-button-enabled"?: boolean;
+      "vigogh-autocomplete-enabled"?: boolean;
     }>([
       "vigogh-settings",
       "vigogh-locales",
@@ -509,6 +510,7 @@ export function loadConfig(): void {
       "vigogh-tool-preferences",
       "vigogh-ai-button-appearance",
       "vigogh-ai-button-enabled",
+      "vigogh-autocomplete-enabled",
     ])
     .then((stored) => {
       const raw = stored["vigogh-settings"];
@@ -585,8 +587,18 @@ export function loadConfig(): void {
           extensionStore.setState({ siteConfig: matchedSite });
         }
 
+        const persistedAutocompleteEnabled =
+          stored["vigogh-autocomplete-enabled"] ?? false;
         const { sessionAutocompleteEnabled } = extensionStore.getState();
-        extensionStore.setState({ disabled: !sessionAutocompleteEnabled });
+        const autocompleteEnabled =
+          sessionAutocompleteEnabled || persistedAutocompleteEnabled;
+        extensionStore.setState({
+          disabled: !autocompleteEnabled,
+          sessionAutocompleteEnabled: autocompleteEnabled,
+        });
+        if (autocompleteEnabled && !sessionAutocompleteEnabled) {
+          onAutocompleteRestored?.();
+        }
         tryAttachToActiveElement();
       } else {
         extensionStore.setState({

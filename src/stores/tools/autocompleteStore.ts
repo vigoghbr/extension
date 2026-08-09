@@ -196,6 +196,10 @@ export function clearSuppress(): void {
 }
 
 export function setSiteEnabled(enabled: boolean): void {
+  chrome.storage.local
+    .set({ "vigogh-autocomplete-enabled": enabled })
+    .catch(() => {});
+
   if (!enabled) {
     clearDebounce();
     extensionStore.setState({
