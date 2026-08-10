@@ -42,9 +42,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="extension-$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          TAG="$(date +'%Y%m%d')-${GITHUB_SHA::7}"
           gh release create "$TAG" \
-            --title "Extension Build — $TAG" \
+            --title "Extension — $TAG" \
             --generate-notes \
             --target "$GITHUB_SHA" \
             extension.zip
