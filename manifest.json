@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vigogh",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "description": "Multiplique sua produtividade",
   "permissions": [
     "sidePanel",
