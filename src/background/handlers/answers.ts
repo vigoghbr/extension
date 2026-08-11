@@ -4,23 +4,25 @@ import api, {
   isUnauthorizedError,
 } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
+import { getPageId } from "@/libs/page-id";
 
 export const handleMessages: BackgroundMessageHandler = (
   message,
-  _sender,
+  sender,
   sendResponse,
 ) => {
   if (message.action === "answers_request") {
     const apiPath = message.apiPath ?? getEndpoint("answers");
+    const pageId = getPageId(sender.tab);
     api
       .post(apiPath, {
-        pageURL: message.url,
+        pageId,
+        pageURL: message.pageURL,
         pageScreenshot: message.pageScreenshot ?? "",
         pageContent: message.pageContent ?? "",
         pageMetadata: message.pageMetadata ?? "",
         pageForms: message.pageForms ?? "",
-        messages: message.messages ?? [],
-        direction: message.direction,
+        text: message.text,
       })
       .then(({ data }) =>
         sendResponse({

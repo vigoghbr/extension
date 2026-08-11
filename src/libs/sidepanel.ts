@@ -1,10 +1,11 @@
-import { hasValidSession } from "@/libs/auth";
-import { toast } from "@/libs/toast";
-import { extensionStore } from "@/stores/extensionStore";
+import { hasValidSession as hasValidAuthSession } from "@/libs/auth";
+import { hasValidSessionSync } from "@/libs/session";
+import { toastr } from "@/libs/toastr";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
 const PENDING_ROUTE_KEY = "vigogh-pending-route";
 const PLANS_PATH = "/sidepanel/plan";
+const VALIDATE_SESSION_PATH = "/sidepanel/validate-session";
 
 export async function openSidePanelForTab(
   tabId: number | undefined,
@@ -73,16 +74,27 @@ export function openPlansScreen(): Promise<void> {
   return navigateSidepanel(PLANS_PATH);
 }
 
-export function requireSession(action: () => void): boolean {
-  if (hasValidSession()) {
+export function openValidateSessionScreen(): Promise<void> {
+  return navigateSidepanel(VALIDATE_SESSION_PATH);
+}
+
+export function requireSiteSession(action: () => void): boolean {
+  if (hasValidSessionSync()) {
     action();
     return true;
   }
-  void openSidePanel();
-  const errors = extensionStore.getState().config?.messages.errors;
-  const message = errors?.UNAUTHORIZED || errors?.default;
-  if (message) {
-    toast.error(message, { id: "vigogh-error-UNAUTHORIZED" });
-  }
+  void openValidateSessionScreen();
+  toastr.info("VALIDATING_SESSION", {
+    id: "vigogh-info-VALIDATING_SESSION",
+  });
   return false;
+}
+
+export function requireSession(action: () => void): boolean {
+  if (!hasValidAuthSession()) {
+    void openSidePanel();
+    toastr.error("UNAUTHORIZED", { id: "vigogh-error-UNAUTHORIZED" });
+    return false;
+  }
+  return requireSiteSession(action);
 }

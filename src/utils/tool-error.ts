@@ -1,16 +1,16 @@
-import { emitErrorToastr } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import { chatStore } from "@/stores/tools/chatStore";
 import { filesStore } from "@/stores/tools/filesStore";
 import { toolsStore } from "@/stores/tools/toolsStore";
 
 let forceCloseHandler: (() => void) | null = null;
 
-export function setForceCloseAiMenu(fn: () => void): void {
+export function setForceCloseWidget(fn: () => void): void {
   forceCloseHandler = fn;
 }
 
 export function handleToolError(): void {
-  emitErrorToastr(null, { id: "vigogh-error-default" });
+  toastr.error(null, { id: "vigogh-error-default" });
 
   toolsStore.setState({
     status: "idle",

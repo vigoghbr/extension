@@ -184,7 +184,7 @@ async function tryClipboard(blob: Blob, mimeType: string): Promise<boolean> {
     const { currentEditor, config } = extensionStore.getState();
     const target = (currentEditor as HTMLElement | null) ?? document.body;
     if (currentEditor) (currentEditor as HTMLElement).focus();
-    const hintMessage = config?.aiMenu.vigoghMenu?.filesPasteHint ?? "";
+    const hintMessage = config?.widget.menu?.filesPasteHint ?? "";
     const dismissMs = config?.behavior.filesPasteHintDismissMs ?? 3000;
     showPasteHint(target, hintMessage, dismissMs);
     if (__DEV__) logger.debug("files:inject", { path: "clipboard" });

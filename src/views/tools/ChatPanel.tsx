@@ -2,7 +2,7 @@ import { Bot, Copy, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import cn from "@/libs/cn";
-import { emitSuccessToastr } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import { chatStore, sendChatMessage } from "@/stores/tools/chatStore";
@@ -18,19 +18,16 @@ export function ChatPanel({ colors }: ChatPanelProps) {
   const status = useStore(chatStore, (s) => s.status);
   const errorCode = useStore(chatStore, (s) => s.errorCode);
   const fullConfig = extensionStore.getState();
-  const vigoghMenu = useStore(
-    extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu,
-  );
-  const chatDisclaimer = vigoghMenu?.chatDisclaimerText ?? "";
-  const emptyHelpLabel = vigoghMenu?.chatEmptyHelp ?? "";
-  const emptyExamples = vigoghMenu?.chatEmptyExamples ?? [];
-  const placeholderLabel = vigoghMenu?.chatPlaceholder ?? "";
-  const sendLabel = vigoghMenu?.chatSend ?? "";
-  const copyLabel = vigoghMenu?.chatCopyTooltip ?? "";
+  const menu = useStore(extensionStore, (s) => s.config?.widget.menu);
+  const chatDisclaimer = menu?.chatDisclaimerText ?? "";
+  const emptyHelpLabel = menu?.chatEmptyHelp ?? "";
+  const emptyExamples = menu?.chatEmptyExamples ?? [];
+  const placeholderLabel = menu?.chatPlaceholder ?? "";
+  const sendLabel = menu?.chatSend ?? "";
+  const copyLabel = menu?.chatCopyTooltip ?? "";
   const maxLength = useStore(
     extensionStore,
-    (s) => s.config!.aiMenu.chat.maxLength,
+    (s) => s.config!.widget.chat.maxLength,
   );
   const chatStyles = useStore(stylesStore, (s) => s.styles?.chatPanel);
   const emptyIconSize = chatStyles?.emptyIconSize ?? 28;
@@ -103,7 +100,7 @@ export function ChatPanel({ colors }: ChatPanelProps) {
       } catch (_) {}
       document.body.removeChild(ta);
     }
-    emitSuccessToastr("CHAT_COPIED");
+    toastr.success("CHAT_COPIED");
   };
 
   return (

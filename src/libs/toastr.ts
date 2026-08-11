@@ -7,6 +7,7 @@ const baseOptions = { icon: null } as const;
 
 interface ToastOptions {
   id?: string | number;
+  duration?: number;
 }
 
 function isEmpty(message: unknown): boolean {
@@ -106,45 +107,46 @@ interface EmitOptions {
   id?: string;
 }
 
-export function emitErrorToastr(
-  code: string | null | undefined,
-  options?: EmitOptions,
-): void {
-  const { config } = extensionStore.getState();
-  const message = resolveErrorMessage(code, config?.messages);
-  if (!message) return;
-  toast.error(message, {
-    id: options?.id ?? `vigogh-error-${code ?? "default"}`,
-  });
-}
-
-export function emitSuccessToastr(code: string, options?: EmitOptions): void {
-  const { config } = extensionStore.getState();
-  const message = resolveSuccessMessage(code, config?.messages);
-  if (!message) return;
-  toast.success(message, { id: options?.id ?? `vigogh-success-${code}` });
-}
-
-export function emitInfoToastr(code: string, options?: EmitOptions): void {
-  const { config } = extensionStore.getState();
-  const message = resolveInfoMessage(code, config?.messages);
-  if (!message) return;
-  toast.info(message, { id: options?.id ?? `vigogh-info-${code}` });
-}
-
-export function emitNeutralToastr(code: string, options?: EmitOptions): void {
-  const { config } = extensionStore.getState();
-  const message = resolveInfoMessage(code, config?.messages);
-  if (!message) return;
-  toast.show(message, { id: options?.id ?? `vigogh-info-${code}` });
-}
-
-export function emitLoadingToastr(
-  code: string,
-  options?: EmitOptions,
-): string | number {
-  const { config } = extensionStore.getState();
-  const message = resolveInfoMessage(code, config?.messages);
-  if (!message) return -1;
-  return toast.loading(message, options?.id ? { id: options.id } : undefined);
-}
+export const toastr = {
+  success(code: string, options?: EmitOptions): void {
+    const { config } = extensionStore.getState();
+    const message = resolveSuccessMessage(code, config?.messages);
+    if (!message) return;
+    toast.success(message, { id: options?.id ?? `vigogh-success-${code}` });
+  },
+  error(code: string | null | undefined, options?: EmitOptions): void {
+    const { config } = extensionStore.getState();
+    const message = resolveErrorMessage(code, config?.messages);
+    if (!message) return;
+    toast.error(message, {
+      id: options?.id ?? `vigogh-error-${code ?? "default"}`,
+    });
+  },
+  info(code: string, options?: EmitOptions): void {
+    const { config } = extensionStore.getState();
+    const message = resolveInfoMessage(code, config?.messages);
+    if (!message) return;
+    toast.info(message, { id: options?.id ?? `vigogh-info-${code}` });
+  },
+  neutral(code: string, options?: EmitOptions): void {
+    const { config } = extensionStore.getState();
+    const message = resolveInfoMessage(code, config?.messages);
+    if (!message) return;
+    toast.show(message, { id: options?.id ?? `vigogh-info-${code}` });
+  },
+  loading(code: string, options?: EmitOptions): string | number {
+    const { config } = extensionStore.getState();
+    const message = resolveInfoMessage(code, config?.messages);
+    if (!message) return -1;
+    return toast.loading(message, options?.id ? { id: options.id } : undefined);
+  },
+  persistent(code: string, id: string): void {
+    const { config } = extensionStore.getState();
+    const message = resolveInfoMessage(code, config?.messages);
+    if (!message) return;
+    toast.show(message, { id, duration: Number.POSITIVE_INFINITY });
+  },
+  dismiss(id: string | number): void {
+    toast.dismiss(id);
+  },
+};

@@ -91,7 +91,7 @@ async function build() {
   const entryPoints = {
     background: path.join(__dirname, "src/background/index.ts"),
     sidepanel: path.join(__dirname, "src/sidepanel/index.ts"),
-    contentScript: path.join(__dirname, "src/utils/contentScript.tsx"),
+    contentScript: path.join(__dirname, "src/views/ContentScript.tsx"),
     debug: path.join(__dirname, "src/debug/index.ts"),
   };
 

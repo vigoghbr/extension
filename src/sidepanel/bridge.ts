@@ -175,9 +175,8 @@ export function setupIframeBridge(
 
     if ("vigogh-ai-button-enabled" in changes) {
       const enabled =
-        (changes["vigogh-ai-button-enabled"].newValue as
-          | boolean
-          | undefined) ?? true;
+        (changes["vigogh-ai-button-enabled"].newValue as boolean | undefined) ??
+        true;
       try {
         iframe.contentWindow?.postMessage(
           { type: "VIGOGH_AI_BUTTON_ENABLED", enabled },
@@ -244,7 +243,7 @@ export function setupIframeBridge(
               toolsEnabled: {},
               transformsEnabled: {},
               indicatorsEnabled: { page: true, bottomBorder: true },
-              aiMenuTools: {},
+              menuTools: {},
             };
             iframe.contentWindow!.postMessage(
               { type: "VIGOGH_TOOL_PREFERENCES", preferences },
@@ -323,6 +322,15 @@ export function setupIframeBridge(
             }
           },
         );
+      } else if (event.data?.type === "VIGOGH_SET_SESSION_TOKEN") {
+        if (!isExtensionContextValid()) return;
+
+        const { sessionId, expiresAt } = event.data;
+        chrome.runtime.sendMessage({
+          action: "set_session" as const,
+          sessionId,
+          expiresAt,
+        });
       } else if (event.data?.type === "VIGOGH_TEXT_TRANSFORM") {
         if (!isExtensionContextValid()) return;
 
@@ -415,7 +423,7 @@ export function setupIframeBridge(
               toolsEnabled: {},
               transformsEnabled: {},
               indicatorsEnabled: { page: true, bottomBorder: true },
-              aiMenuTools: {},
+              menuTools: {},
             };
             iframe.contentWindow!.postMessage(
               { type: "VIGOGH_TOOL_PREFERENCES", preferences },

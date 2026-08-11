@@ -3,18 +3,18 @@ import { hidePageIndicator } from "@/stores/indicatorsStore";
 import { toolsStore } from "@/stores/tools/toolsStore";
 import type { ResolvedAnswerToolConfig } from "@/types";
 import { onLoginRequired } from "@/utils/login-required";
-import { setForceCloseAiMenu } from "@/utils/tool-error";
+import { setForceCloseWidget } from "@/utils/tool-error";
 
 export type ActivePopover = "ai" | "files" | "messages" | "notes";
 
-interface AiMenuState {
+interface WidgetState {
   activePopovers: ActivePopover[];
   activeInputItem: ResolvedAnswerToolConfig | null;
   direction: string;
   chatOpen: boolean;
 }
 
-export const aiMenuStore = createStore<AiMenuState>(() => ({
+export const widgetStore = createStore<WidgetState>(() => ({
   activePopovers: [],
   activeInputItem: null,
   direction: "",
@@ -22,21 +22,21 @@ export const aiMenuStore = createStore<AiMenuState>(() => ({
 }));
 
 export function isPopoverActive(popover: ActivePopover): boolean {
-  return aiMenuStore.getState().activePopovers.includes(popover);
+  return widgetStore.getState().activePopovers.includes(popover);
 }
 
 export function openPopover(popover: ActivePopover): void {
-  const { activePopovers } = aiMenuStore.getState();
+  const { activePopovers } = widgetStore.getState();
   if (activePopovers.includes(popover)) return;
-  aiMenuStore.setState({ activePopovers: [...activePopovers, popover] });
+  widgetStore.setState({ activePopovers: [...activePopovers, popover] });
 }
 
 export function closePopover(popover?: ActivePopover): void {
   if (toolsStore.getState().status === "loading") return;
   if (!popover) {
-    const prev = aiMenuStore.getState().activeInputItem;
+    const prev = widgetStore.getState().activeInputItem;
     if (prev) hidePageIndicator();
-    aiMenuStore.setState({
+    widgetStore.setState({
       activePopovers: [],
       activeInputItem: null,
       direction: "",
@@ -44,24 +44,24 @@ export function closePopover(popover?: ActivePopover): void {
     });
     return;
   }
-  const { activePopovers, activeInputItem } = aiMenuStore.getState();
+  const { activePopovers, activeInputItem } = widgetStore.getState();
   const next = activePopovers.filter((p) => p !== popover);
   if (popover === "ai") {
     if (activeInputItem) hidePageIndicator();
-    aiMenuStore.setState({
+    widgetStore.setState({
       activePopovers: next,
       activeInputItem: null,
       direction: "",
       chatOpen: false,
     });
   } else {
-    aiMenuStore.setState({ activePopovers: next });
+    widgetStore.setState({ activePopovers: next });
   }
 }
 
-export function forceCloseAiMenu(): void {
-  if (aiMenuStore.getState().activeInputItem) hidePageIndicator();
-  aiMenuStore.setState({
+export function forceCloseWidget(): void {
+  if (widgetStore.getState().activeInputItem) hidePageIndicator();
+  widgetStore.setState({
     activePopovers: [],
     activeInputItem: null,
     direction: "",
@@ -90,18 +90,18 @@ export function toggleMenu(): void {
 }
 
 export function openChat(): void {
-  aiMenuStore.setState({ chatOpen: true });
+  widgetStore.setState({ chatOpen: true });
 }
 
 export function closeChat(): void {
-  aiMenuStore.setState({ chatOpen: false });
+  widgetStore.setState({ chatOpen: false });
 }
 
 export function setActiveInputItem(
   item: ResolvedAnswerToolConfig | null,
 ): void {
-  const prev = aiMenuStore.getState().activeInputItem;
-  aiMenuStore.setState({ activeInputItem: item });
+  const prev = widgetStore.getState().activeInputItem;
+  widgetStore.setState({ activeInputItem: item });
 
   if (!item && prev) {
     hidePageIndicator();
@@ -109,11 +109,11 @@ export function setActiveInputItem(
 }
 
 export function setDirection(text: string): void {
-  aiMenuStore.setState({ direction: text });
+  widgetStore.setState({ direction: text });
 }
 
-onLoginRequired(forceCloseAiMenu);
-setForceCloseAiMenu(forceCloseAiMenu);
+onLoginRequired(forceCloseWidget);
+setForceCloseWidget(forceCloseWidget);
 
 toolsStore.subscribe((state, prev) => {
   if (
@@ -124,11 +124,11 @@ toolsStore.subscribe((state, prev) => {
     setActiveInputItem(null);
   }
   if (state.status === "error" && prev.status !== "error") {
-    forceCloseAiMenu();
+    forceCloseWidget();
   }
   if (state.status === "success" && prev.status !== "success") {
     hidePageIndicator();
-    aiMenuStore.setState({ direction: "" });
-    if (aiMenuStore.getState().activeInputItem) openPopover("ai");
+    widgetStore.setState({ direction: "" });
+    if (widgetStore.getState().activeInputItem) openPopover("ai");
   }
 });

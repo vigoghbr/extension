@@ -1,12 +1,16 @@
 export interface CapturePageMessage {
   action: "capture_page";
+  silent?: boolean;
 }
 
 export interface AutocompleteRequestMessage {
   action: "autocomplete_request";
   text: string;
-  url: string;
-  context: { role: string; text: string }[];
+  pageURL?: string;
+  pageScreenshot?: string;
+  pageContent?: string;
+  pageMetadata?: string;
+  pageForms?: string;
 }
 
 export interface AutocompleteAcceptMessage {
@@ -25,6 +29,12 @@ export interface ClearAuthTokenMessage {
   action: "clear_auth_token";
 }
 
+export interface SetSessionMessage {
+  action: "set_session";
+  sessionId: string;
+  expiresAt: string;
+}
+
 export interface AuthCheckMessage {
   action: "auth_check";
 }
@@ -41,13 +51,12 @@ export interface TransformsRequestMessage {
 
 export interface AnswersRequestMessage {
   action: "answers_request";
-  url: string;
-  messages: { role: string; text: string }[];
+  pageURL: string;
   pageContent: string;
   pageMetadata: string;
   pageForms: string;
   pageScreenshot?: string;
-  direction?: string;
+  text?: string;
   apiPath?: string;
 }
 
@@ -74,7 +83,7 @@ export interface UserToolPreferences {
   toolsEnabled: Record<string, boolean>;
   transformsEnabled: Record<string, boolean>;
   indicatorsEnabled: { page: boolean; bottomBorder: boolean };
-  aiMenuTools: Record<string, boolean>;
+  menuTools: Record<string, boolean>;
 }
 
 export interface SetToolPreferencesMessage {
@@ -172,6 +181,7 @@ export type ExtensionMessage =
   | AutocompleteAcceptMessage
   | SetAuthTokenMessage
   | ClearAuthTokenMessage
+  | SetSessionMessage
   | AuthCheckMessage
   | ReloadActiveTabMessage
   | TransformsRequestMessage
@@ -324,6 +334,7 @@ export interface AutocompleteResponse {
   completion?: string;
   toolUsageId?: string;
   error?: string;
+  errorCode?: string;
   reason?: "unauthenticated" | "api_error";
 }
 
@@ -355,6 +366,12 @@ export interface SetAuthTokenPostMessage {
 
 export interface ClearAuthTokenPostMessage {
   type: "VIGOGH_CLEAR_AUTH_TOKEN";
+}
+
+export interface SetSessionTokenPostMessage {
+  type: "VIGOGH_SET_SESSION_TOKEN";
+  sessionId: string;
+  expiresAt: string;
 }
 
 export interface SidepanelTextTransformPostMessage {
@@ -401,7 +418,7 @@ export interface ThemeDefinition {
   colors: ThemeColorSet;
 }
 
-export interface ExtensionStylesAiMenu {
+export interface ExtensionStylesWidget {
   pillPadding: number;
   pillGap: number;
   popoverGap: number;
@@ -537,7 +554,7 @@ export interface ExtensionStylesShineButton {
 export interface ExtensionStyles {
   defaultTheme: string;
   themes: Array<{ name: string; colors: ThemeColorSet }>;
-  aiMenu: ExtensionStylesAiMenu;
+  widget: ExtensionStylesWidget;
   indicators: ExtensionStylesIndicators;
   zLayers: ExtensionStylesZLayers;
   window: ExtensionStylesWindow;
@@ -562,7 +579,7 @@ export interface ExtensionLocales {
     autocompletePageTitle?: LocaleString;
     acceptHint?: LocaleString;
   };
-  aiMenu: {
+  widget: {
     transformsNoSelectionTooltip?: LocaleString;
     tools: Record<
       string,
@@ -577,7 +594,7 @@ export interface ExtensionLocales {
     >;
     transforms: Record<string, { label?: LocaleString }>;
     links: Record<string, { label?: LocaleString }>;
-    vigoghMenu?: {
+    menu?: {
       filesLabel?: LocaleString;
       filesSendLabel?: LocaleString;
       filesEditLabel?: LocaleString;
@@ -586,14 +603,9 @@ export interface ExtensionLocales {
       filesDeleteLabel?: LocaleString;
       filesDeleteConfirmLabel?: LocaleString;
       filesAttachHint?: LocaleString;
-      filesAttachUnavailable?: LocaleString;
-      filesUploadLoading?: LocaleString;
       filesUploadSuccess?: LocaleString;
       filesDeleteSuccess?: LocaleString;
       filesRenameSuccess?: LocaleString;
-      filesAttachLoading?: LocaleString;
-      filesAttachSuccess?: LocaleString;
-      filesAttachFailed?: LocaleString;
       filesPasteHint?: LocaleString;
       messagesLabel?: LocaleString;
       messagesAttachHint?: LocaleString;
@@ -675,6 +687,7 @@ export type IframeToSidepanelPostMessage =
   | CapturePagePostMessage
   | SetAuthTokenPostMessage
   | ClearAuthTokenPostMessage
+  | SetSessionTokenPostMessage
   | SidepanelTextTransformPostMessage
   | IframeIndicatorEventPostMessage
   | CheckSelectionPostMessage
@@ -763,64 +776,6 @@ export interface PageSessionData {
   pageScreenshot: string;
 }
 
-export interface SiteContextMode {
-  containerSelector: string;
-  containerRelation?: "closest" | "querySelector";
-  messageSelector?: string;
-  textSelector?: string;
-  outgoingSelector?: string;
-  outgoingRelation?: "self-or-child" | "ancestor";
-  allIncoming?: boolean;
-  maxMessages?: number;
-  metadataAttribute?: string;
-  metadataSelector?: string;
-  metadataStrip?: "bracket-timestamp";
-  textCleanup?: "remove-non-last-child-divs";
-  deduplicate?: boolean;
-  mediaPlaceholders?: Array<{
-    selector: string;
-    field: "text" | MessageMediaField;
-    text?: string;
-    contentSelector?: string;
-    contentAttribute?: string;
-  }>;
-}
-
-export interface SiteContextWithModes {
-  modes: SiteContextMode[];
-}
-
-export interface SiteContextDirect {
-  containerSelector: string;
-  containerRelation?: "closest" | "querySelector";
-  messageSelector?: string;
-  textSelector?: string;
-  outgoingSelector?: string;
-  outgoingRelation?: "self-or-child" | "ancestor";
-  allIncoming?: boolean;
-  maxMessages?: number;
-  metadataAttribute?: string;
-  metadataSelector?: string;
-  metadataStrip?: "bracket-timestamp";
-  textCleanup?: "remove-non-last-child-divs";
-  deduplicate?: boolean;
-  mediaPlaceholders?: Array<{
-    selector: string;
-    field: "text" | MessageMediaField;
-    text?: string;
-    contentSelector?: string;
-    contentAttribute?: string;
-  }>;
-}
-
-export type SiteContext = SiteContextDirect | SiteContextWithModes;
-
-export interface SiteObserver {
-  target: string;
-  childList: boolean;
-  subtree: boolean;
-}
-
 export interface SiteConfig {
   key: string;
   name: string;
@@ -829,10 +784,6 @@ export interface SiteConfig {
   hostnamePatterns?: string[];
   editorSelector: string;
   editorType: "contenteditable" | "textarea" | "mixed";
-  context: SiteContext;
-  observer: SiteObserver | null;
-  audioMessageSelector?: string;
-  audioSrcSelector?: string;
   fileAttach?: SiteFileAttachConfig;
 }
 
@@ -921,7 +872,7 @@ export interface LinkItemConfig {
   href?: string;
 }
 
-export interface AiMenuConfig {
+export interface WidgetConfig {
   enabled?: boolean;
   bottom?: string;
   right?: string;
@@ -948,7 +899,7 @@ export interface AiMenuConfig {
   tools?: ToolItemConfig[];
   transforms?: TransformItemConfig[];
   links?: LinkItemConfig[];
-  vigoghMenu?: {
+  menu?: {
     filesLabel?: LocaleString;
     filesSendLabel?: LocaleString;
     filesEditLabel?: LocaleString;
@@ -957,14 +908,9 @@ export interface AiMenuConfig {
     filesDeleteLabel?: LocaleString;
     filesDeleteConfirmLabel?: LocaleString;
     filesAttachHint?: LocaleString;
-    filesAttachUnavailable?: LocaleString;
-    filesUploadLoading?: LocaleString;
     filesUploadSuccess?: LocaleString;
     filesDeleteSuccess?: LocaleString;
     filesRenameSuccess?: LocaleString;
-    filesAttachLoading?: LocaleString;
-    filesAttachSuccess?: LocaleString;
-    filesAttachFailed?: LocaleString;
     filesPasteHint?: LocaleString;
     messagesLabel?: LocaleString;
     messagesAttachHint?: LocaleString;
@@ -998,17 +944,6 @@ export interface AiMenuConfig {
   };
 }
 
-export type MessageMediaField = "image" | "audio" | "video" | "file";
-
-export interface ConversationMessage {
-  role: "incoming" | "outgoing";
-  text?: string;
-  image?: string;
-  audio?: string;
-  video?: string;
-  file?: string;
-}
-
 export interface CaretCoordinates {
   top: number;
   left: number;
@@ -1017,9 +952,7 @@ export interface CaretCoordinates {
 
 export interface SiteStrategy {
   readonly siteKey: string;
-  getEditorSelector(): string;
   getCurrentText(editor: HTMLElement): string;
-  getConversationContext(editor: HTMLElement): ConversationMessage[];
   getCaretCoordinates(editor: HTMLElement): CaretCoordinates | null;
   insertText(editor: HTMLElement, text: string): void;
   replaceSelectedText(
@@ -1035,12 +968,9 @@ export interface SiteStrategy {
     savedRange?: Range,
   ): void;
   pasteFile?(editor: HTMLElement, file: File): boolean;
-  observeEditorChanges(callback: () => void): (() => void) | null;
 }
 
 export interface SitesFallbackConfig {
-  editorSelector?: string;
-  editorType?: "contenteditable" | "textarea" | "mixed";
   fileAttach?: SiteFileAttachConfig;
 }
 
@@ -1072,7 +1002,8 @@ export interface ExtensionSettings {
     filesUploadPollAttempts?: number;
     filesUploadPollIntervalMs?: number;
     windowDragMarginPx?: number;
-    mainContentLimit?: number;
+    pageContentMaxSizeKB?: number;
+    pageScreenshotMaxSizeKB?: number;
     maxLinks?: number;
   };
   overlay: {
@@ -1090,7 +1021,7 @@ export interface ExtensionSettings {
     badgeGap?: number;
     badgeSafetyPad?: number;
   };
-  aiMenu?: AiMenuConfig;
+  widget?: WidgetConfig;
   endpoints?: Partial<Record<EndpointKey, string>>;
   indicators?: {
     page?: {
@@ -1129,7 +1060,8 @@ export interface ResolvedBehaviorConfig {
   filesUploadPollAttempts?: number;
   filesUploadPollIntervalMs?: number;
   windowDragMarginPx?: number;
-  mainContentLimit?: number;
+  pageContentMaxSizeKB?: number;
+  pageScreenshotMaxSizeKB?: number;
   maxLinks?: number;
 }
 
@@ -1236,7 +1168,7 @@ export interface ResolvedLinkItemConfig {
   href?: string;
 }
 
-export interface ResolvedAiMenuConfig {
+export interface ResolvedWidgetConfig {
   enabled?: boolean;
   bottom: string;
   right: string;
@@ -1260,7 +1192,7 @@ export interface ResolvedAiMenuConfig {
   tools: ResolvedToolItemConfig[];
   transforms: ResolvedTransformItemConfig[];
   links: ResolvedLinkItemConfig[];
-  vigoghMenu?: {
+  menu?: {
     filesLabel: string;
     filesSendLabel: string;
     filesEditLabel: string;
@@ -1269,14 +1201,9 @@ export interface ResolvedAiMenuConfig {
     filesDeleteLabel: string;
     filesDeleteConfirmLabel: string;
     filesAttachHint: string;
-    filesAttachUnavailable: string;
-    filesUploadLoading: string;
     filesUploadSuccess: string;
     filesDeleteSuccess: string;
     filesRenameSuccess: string;
-    filesAttachLoading: string;
-    filesAttachSuccess: string;
-    filesAttachFailed: string;
     filesPasteHint: string;
     messagesLabel: string;
     messagesAttachHint: string;
@@ -1349,7 +1276,7 @@ export interface ResolvedExtensionSettings {
   messages: ResolvedMessagesConfig;
   behavior: ResolvedBehaviorConfig;
   overlay: ResolvedOverlayConfig;
-  aiMenu: ResolvedAiMenuConfig;
+  widget: ResolvedWidgetConfig;
   indicators: ResolvedIndicatorsConfig;
   themes: ThemeDefinition[];
   sitesFallback: ResolvedSitesFallbackConfig;

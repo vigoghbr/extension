@@ -3,12 +3,7 @@ import {
   replaceAllTextInContentEditable,
 } from "@/libs/text-insertion";
 import { measureWidth } from "@/libs/text-measure";
-import type {
-  CaretCoordinates,
-  ConversationMessage,
-  ResolvedSitesFallbackConfig,
-  SiteStrategy,
-} from "@/types";
+import type { CaretCoordinates, SiteStrategy } from "@/types";
 
 export const DEFAULT_GENERAL_SELECTOR = [
   'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="image"])',
@@ -39,23 +34,10 @@ function getNativeSetter(
 
 export class GeneralInputStrategy implements SiteStrategy {
   readonly siteKey = "general";
-  private config: ResolvedSitesFallbackConfig;
-
-  constructor(config: ResolvedSitesFallbackConfig) {
-    this.config = config;
-  }
-
-  getEditorSelector(): string {
-    return this.config.editorSelector;
-  }
 
   getCurrentText(editor: HTMLElement): string {
     if (isInputLike(editor)) return editor.value;
     return editor.textContent?.trim() ?? "";
-  }
-
-  getConversationContext(): ConversationMessage[] {
-    return [];
   }
 
   getCaretCoordinates(editor: HTMLElement): CaretCoordinates | null {
@@ -223,10 +205,6 @@ export class GeneralInputStrategy implements SiteStrategy {
 
   pasteFile(editor: HTMLElement, file: File): boolean {
     return pasteFileIntoEditor(editor, file);
-  }
-
-  observeEditorChanges(): null {
-    return null;
   }
 }
 

@@ -1,7 +1,7 @@
 import { createStore } from "zustand/vanilla";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
-import { emitErrorToastr, emitSuccessToastr, toast } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import type {
   FileItem,
@@ -35,7 +35,7 @@ function toastErrorCode(errorCode: string | undefined): boolean {
   const map = extensionStore.getState().config?.messages.errors;
   const hasMessage = !!(map && (map[errorCode] || map.DEFAULT));
   if (!hasMessage) return false;
-  emitErrorToastr(errorCode);
+  toastr.error(errorCode);
   return true;
 }
 
@@ -69,12 +69,9 @@ export function uploadFile(file: File): void {
   if (!isExtensionContextValid()) return;
   filesStore.setState({ uploadStatus: "loading" });
 
-  const labels = extensionStore.getState().config?.aiMenu.vigoghMenu;
-  const loadingId = labels?.filesUploadLoading
-    ? toast.loading(labels.filesUploadLoading)
-    : null;
+  const loadingId = toastr.loading("FILE_UPLOAD_LOADING");
   const dismissLoading = () => {
-    if (loadingId !== null) toast.dismiss(loadingId);
+    toastr.dismiss(loadingId);
   };
 
   const reader = new FileReader();
@@ -93,7 +90,7 @@ export function uploadFile(file: File): void {
           return;
         }
         dismissLoading();
-        emitSuccessToastr("FILE_UPLOADED");
+        toastr.success("FILE_UPLOADED");
         if (response.file) {
           filesStore.setState((s) => ({
             uploadStatus: "success",
@@ -140,7 +137,7 @@ export function renameFile(fileId: string, name: string): void {
           items: s.items.map((i) => (i.id === fileId ? file : i)),
         }));
       }
-      emitSuccessToastr("FILE_RENAMED");
+      toastr.success("FILE_RENAMED");
     },
   );
 }
@@ -183,7 +180,7 @@ export function deleteFile(fileId: string): void {
         filesStore.setState({ items: previous });
         return;
       }
-      emitSuccessToastr("FILE_DELETED");
+      toastr.success("FILE_DELETED");
     },
   );
 }

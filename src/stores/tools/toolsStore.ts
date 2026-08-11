@@ -1,24 +1,15 @@
 import { createStore } from "zustand/vanilla";
-import { logger } from "@/libs/logger";
 import { openPlansScreen } from "@/libs/sidepanel";
-import {
-  emitErrorToastr,
-  emitInfoToastr,
-  emitLoadingToastr,
-  emitSuccessToastr,
-  toast,
-} from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import {
   extensionStore,
   getActiveStrategy,
-  onEditorChange,
   resolveEditorWithStrategy,
 } from "@/stores/extensionStore";
 import { showPageIndicator } from "@/stores/indicatorsStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
 import type { ResolvedAnswerToolConfig, ToolResponse } from "@/types";
-import { applyTextToEditor } from "@/utils/apply-text";
-import { blobUrlToBase64 } from "@/utils/blob-to-base64";
+import { applyTextWithIdentify } from "@/utils/apply-text";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired, requestLogin } from "@/utils/login-required";
 import { hasAuthToken, sendBackgroundRequest } from "@/utils/runtime-request";
@@ -46,9 +37,6 @@ export const toolsStore = createStore<AnswersState>()(() => ({
   toolUsageId: null,
 }));
 
-let pendingEditor: HTMLElement | null = null;
-let pendingApplyText: string | null = null;
-
 export function requestAnswers(
   itemId: string,
   directionOverride?: string,
@@ -73,48 +61,20 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
   if (!config) return;
   const { editor, strategy } = resolveEditorWithStrategy();
 
-  const toolConfig = config.aiMenu.tools.find((t) => t.id === itemId) as
+  const toolConfig = config.widget.tools.find((t) => t.id === itemId) as
     | ResolvedAnswerToolConfig
     | undefined;
   const apiPath = toolConfig?.apiPath ?? "/v1/tools/answers";
 
-  const text = editor && strategy ? strategy.getCurrentText(editor) : "";
-  const direction =
+  const editorText = editor && strategy ? strategy.getCurrentText(editor) : "";
+  const text =
     directionOverride !== undefined
       ? directionOverride.trim() || undefined
-      : text.trim() || undefined;
-  const url = window.location.href;
+      : editorText.trim() || undefined;
+  const pageURL = window.location.href;
 
-  const messages =
-    editor && strategy
-      ? strategy.getConversationContext(editor).map((m) => ({ ...m }))
-      : [];
-
-  const mediaFields = ["image", "audio", "video", "file"] as const;
-  const resolvedMessagesPromise = Promise.all(
-    messages.map(async (m) => {
-      const result = { ...m } as Record<string, unknown>;
-      for (const field of mediaFields) {
-        const value = result[field];
-        if (typeof value === "string" && value.startsWith("blob:")) {
-          try {
-            result[field] = await blobUrlToBase64(value);
-          } catch (error) {
-            logger.warn("answers:blob-fetch-failed", {
-              field,
-              url: value,
-              error,
-            });
-          }
-        }
-      }
-      if (typeof result.text !== "string") result.text = "";
-      return result;
-    }),
-  );
-  const toastId = emitLoadingToastr("GENERATING_SUGGESTIONS");
+  const toastId = toastr.loading("GENERATING_SUGGESTIONS");
   const dispatchAnswers = (
-    messages: unknown[],
     pageScreenshot?: string,
     pageContent = "",
     pageMetadata = "",
@@ -123,17 +83,16 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
     sendBackgroundRequest<ToolResponse>(
       {
         action: "answers_request",
-        url,
-        messages,
+        pageURL,
         pageContent,
         pageMetadata,
         pageForms,
         pageScreenshot,
-        direction,
+        text,
         apiPath,
       },
       (response) => {
-        toast.dismiss(toastId);
+        toastr.dismiss(toastId);
         if (chrome.runtime.lastError) {
           handleToolError();
           return;
@@ -141,7 +100,7 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
         if (!response?.success || !response.suggestions?.length) {
           const code = response?.errorCode;
           if (code) {
-            emitErrorToastr(code);
+            toastr.error(code);
             toolsStore.setState({
               status: "error",
               activeItemId: null,
@@ -159,75 +118,50 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
           toolUsageId: response.toolUsageId ?? null,
         });
       },
-      { onNoToken: () => toast.dismiss(toastId) },
+      { onNoToken: () => toastr.dismiss(toastId) },
     );
   };
 
   showPageIndicator();
   toolsStore.setState({ status: "loading", activeItemId: itemId });
 
-  resolvedMessagesPromise
-    .then((messages) => {
-      chrome.runtime.sendMessage(
-        { action: "capture_page" },
-        (
-          res:
-            | {
-                success?: boolean;
-                data?: {
-                  pageScreenshot?: string;
-                  pageContent?: string;
-                  pageMetadata?: string;
-                  pageForms?: string;
-                };
-              }
-            | undefined,
-        ) => {
-          if (chrome.runtime.lastError || !res?.success) {
-            toast.dismiss(toastId);
-            handleToolError();
-            return;
+  chrome.runtime.sendMessage(
+    { action: "capture_page" },
+    (
+      res:
+        | {
+            success?: boolean;
+            data?: {
+              pageScreenshot?: string;
+              pageContent?: string;
+              pageMetadata?: string;
+              pageForms?: string;
+            };
           }
-          dispatchAnswers(
-            messages,
-            res.data?.pageScreenshot,
-            res.data?.pageContent ?? "",
-            res.data?.pageMetadata ?? "",
-            res.data?.pageForms ?? "",
-          );
-        },
+        | undefined,
+    ) => {
+      if (chrome.runtime.lastError || !res?.success) {
+        toastr.dismiss(toastId);
+        handleToolError();
+        return;
+      }
+      dispatchAnswers(
+        res.data?.pageScreenshot,
+        res.data?.pageContent ?? "",
+        res.data?.pageMetadata ?? "",
+        res.data?.pageForms ?? "",
       );
-    })
-    .catch((error) => {
-      toast.dismiss(toastId);
-      logger.error("answers:extract-failed", { error });
-      handleToolError();
-    });
+    },
+  );
 }
 
 export function acceptAnswer(text: string): void {
   navigator.clipboard.writeText(text);
   autocompleteStore.setState({ suppressUntilKeydown: true });
-
-  const applied = applyTextToEditor(text);
-  if (applied) {
-    emitSuccessToastr("CHAT_COPIED");
-    pendingApplyText = null;
-    return;
-  }
-
-  pendingApplyText = text;
-  emitInfoToastr("APPLY_TARGET_MISSING");
+  applyTextWithIdentify(text, "SELECT_APPLY_TARGET").then(() => {
+    toastr.success("TEXT_PASTED");
+  });
 }
-
-export function flushPendingAnswerApply(): void {
-  if (!pendingApplyText) return;
-  const text = pendingApplyText;
-  if (!applyTextToEditor(text)) return;
-  pendingApplyText = null;
-}
-
-onEditorChange(flushPendingAnswerApply);
 
 export function setSelectedRange(range: Range | null): void {
   toolsStore.setState({
@@ -252,10 +186,6 @@ export function applyTransform(
   const savedText = strategy?.getCurrentText(editor) ?? "";
   if (!savedText) return;
 
-  if (!autoApply) {
-    pendingEditor = editor;
-  }
-
   toolsStore.setState({ status: "loading", activeItemId: itemId });
 
   sendBackgroundRequest<ToolResponse>(
@@ -266,6 +196,11 @@ export function applyTransform(
         !response?.success ||
         !response.suggestions?.length
       ) {
+        if (response?.errorCode) {
+          toastr.error(response.errorCode);
+          toolsStore.setState({ status: "idle", activeItemId: null });
+          return;
+        }
         handleToolError();
         return;
       }
@@ -273,7 +208,7 @@ export function applyTransform(
         const result = response.suggestions[0] ?? "";
         toolsStore.setState({ status: "idle", activeItemId: null });
         if (!result) return;
-        strategy?.replaceAllText(editor, result);
+        applyTextWithIdentify(result, "SELECT_APPLY_TARGET");
       } else {
         toolsStore.setState({
           status: "success",
@@ -285,17 +220,14 @@ export function applyTransform(
 }
 
 export function acceptTransform(suggestion: string): void {
-  const editor = pendingEditor;
-  const strategy = getActiveStrategy();
-  if (!editor || !strategy) return;
-  strategy.replaceAllText(editor, suggestion);
   navigator.clipboard.writeText(suggestion);
-  emitSuccessToastr("CHAT_COPIED");
   autocompleteStore.setState({ suppressUntilKeydown: true });
+  applyTextWithIdentify(suggestion, "SELECT_APPLY_TARGET").then(() => {
+    toastr.success("TEXT_PASTED");
+  });
 }
 
 export function clearAnswers(): void {
-  pendingEditor = null;
   toolsStore.setState({
     status: "idle",
     suggestions: [],

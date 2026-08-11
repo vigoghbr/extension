@@ -3,14 +3,18 @@ import { installGlobalHandlers, logger } from "@/libs/logger";
 
 installGlobalHandlers();
 
-import { initSessionCache } from "@/libs/auth";
-import { emitErrorToastr, emitNeutralToastr } from "@/libs/toast";
-import { aiMenuStore } from "@/stores/aiMenuStore";
+import { initSessionCache as initAuthSessionCache } from "@/libs/auth";
+import { extractPageContent } from "@/libs/page-content-extraction";
+import { extractPageForms } from "@/libs/page-forms-extraction";
+import { extractPageMetadata } from "@/libs/page-metadata-extraction";
+import { extractPageURL } from "@/libs/page-url-extraction";
+import { initSessionCache } from "@/libs/session";
+import { requireSession } from "@/libs/sidepanel";
+import { toastr } from "@/libs/toastr";
 import {
   extensionStore,
   getActiveStrategy,
   getEditorSelector,
-  getGeneralInputSelector,
   loadConfig,
   setCurrentEditor,
   setEditorFocused,
@@ -21,15 +25,14 @@ import {
   autocompleteStore,
   clearSuppress,
   dismissCompletion,
+  restoreAutocompleteIfSessionValid,
   scheduleCompletion,
 } from "@/stores/tools/autocompleteStore";
 import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
+import { widgetStore } from "@/stores/widgetStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
-import {
-  type AttachableFile,
-  isAttachInProgress,
-  triggerAttach,
-} from "@/utils/files-attach";
+import { type AttachableFile, triggerAttach } from "@/utils/files-attach";
+import { DEFAULT_GENERAL_SELECTOR } from "@/utils/general-strategy";
 import { hideIndicator, showIndicator } from "@/utils/indicators";
 import { applyQuickMessage } from "@/utils/quick-message-apply";
 import App from "@/views/App";
@@ -39,6 +42,7 @@ if (!(window as any).__vigoghInit) {
 
   function mount(): void {
     const host = document.createElement("div");
+    host.id = "vigogh-extension-host";
     host.style.cssText =
       "font-size: 16px; line-height: 1.5; font-family: sans-serif; color: initial;";
     const shadowRoot = host.attachShadow({ mode: "open" });
@@ -51,13 +55,17 @@ if (!(window as any).__vigoghInit) {
       onCaughtError: (error) => logger.error("react:caught", { error }),
     }).render(<App />);
 
-    loadConfig(() => {
-      requestAnimationFrame(() => {
-        emitNeutralToastr("AUTOCOMPLETE_ENABLED", {
-          id: "vigogh-autocomplete-restored",
+    loadConfig(
+      () => {
+        requestAnimationFrame(() => {
+          void restoreAutocompleteIfSessionValid();
         });
-      });
-    });
+      },
+      () => {
+        void promptLoginIfNeeded();
+      },
+    );
+    void initAuthSessionCache();
     void initSessionCache();
     initIndicatorListener();
     setupListeners(host);
@@ -71,10 +79,15 @@ if (!(window as any).__vigoghInit) {
     }
   }
 
+  async function promptLoginIfNeeded(): Promise<void> {
+    await Promise.all([initAuthSessionCache(), initSessionCache()]);
+    requireSession(() => {});
+  }
+
   function notifyExtensionStatus(): void {
     const unsubscribe = extensionStore.subscribe((state, prev) => {
-      if (state.aiMenuVisible && !prev.aiMenuVisible) {
-        emitNeutralToastr("AI_BUTTON_AVAILABLE", {
+      if (state.widgetVisible && !prev.widgetVisible) {
+        toastr.neutral("AI_BUTTON_AVAILABLE", {
           id: "vigogh-ai-button-available",
         });
         unsubscribe();
@@ -101,17 +114,6 @@ if (!(window as any).__vigoghInit) {
   }
 
   function setupListeners(host: HTMLElement): void {
-    const generalToastShown = new WeakSet<Element>();
-
-    function notifyDefaultStrategyActivated(editor: Element): void {
-      if (isAttachInProgress()) return;
-      if (generalToastShown.has(editor)) return;
-      generalToastShown.add(editor);
-      emitNeutralToastr("DEFAULT_STRATEGY_ACTIVATED", {
-        id: "vigogh-default-strategy-activated",
-      });
-    }
-
     document.addEventListener(
       "focusin",
       (e: FocusEvent) => {
@@ -130,16 +132,12 @@ if (!(window as any).__vigoghInit) {
           }
         }
 
-        const generalSelector = getGeneralInputSelector();
-        if (generalSelector) {
-          const editor = target.matches(generalSelector)
-            ? target
-            : target.closest(generalSelector);
-          if (editor) {
-            setCurrentEditor(editor);
-            updateHasEditorText(editor);
-            notifyDefaultStrategyActivated(editor);
-          }
+        const editor = target.matches(DEFAULT_GENERAL_SELECTOR)
+          ? target
+          : target.closest(DEFAULT_GENERAL_SELECTOR);
+        if (editor) {
+          setCurrentEditor(editor);
+          updateHasEditorText(editor);
         }
       },
       true,
@@ -150,7 +148,7 @@ if (!(window as any).__vigoghInit) {
       (e: FocusEvent) => {
         const related = e.relatedTarget as Node | null;
         if (related && (related === host || host.contains(related))) return;
-        if (aiMenuStore.getState().activePopovers.length > 0) return;
+        if (widgetStore.getState().activePopovers.length > 0) return;
         if (autocompleteStore.getState().overlayVisible) return;
         const { currentEditor } = extensionStore.getState();
         if (currentEditor) updateHasEditorText(currentEditor);
@@ -162,12 +160,21 @@ if (!(window as any).__vigoghInit) {
     document.addEventListener(
       "input",
       (e: Event) => {
-        const { currentEditor } = extensionStore.getState();
-        if (!currentEditor) return;
         const target = e.target as Node | null;
-        if (target !== currentEditor && !currentEditor.contains(target)) return;
-        scheduleCompletion();
-        updateHasEditorText(currentEditor);
+        const { currentEditor } = extensionStore.getState();
+        if (
+          currentEditor &&
+          (target === currentEditor || currentEditor.contains(target))
+        ) {
+          updateHasEditorText(currentEditor);
+        }
+        const { autocompleteEditor } = autocompleteStore.getState();
+        if (
+          autocompleteEditor &&
+          (target === autocompleteEditor || autocompleteEditor.contains(target))
+        ) {
+          scheduleCompletion();
+        }
       },
       true,
     );
@@ -175,13 +182,22 @@ if (!(window as any).__vigoghInit) {
     document.addEventListener(
       "keyup",
       (e: KeyboardEvent) => {
-        const { currentEditor } = extensionStore.getState();
-        if (!currentEditor) return;
+        if (e.key.length !== 1 && e.key !== "Backspace" && e.key !== "Delete")
+          return;
         const target = e.target as Node | null;
-        if (target !== currentEditor && !currentEditor.contains(target)) return;
-        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
-          scheduleCompletion();
+        const { currentEditor } = extensionStore.getState();
+        if (
+          currentEditor &&
+          (target === currentEditor || currentEditor.contains(target))
+        ) {
           updateHasEditorText(currentEditor);
+        }
+        const { autocompleteEditor } = autocompleteStore.getState();
+        if (
+          autocompleteEditor &&
+          (target === autocompleteEditor || autocompleteEditor.contains(target))
+        ) {
+          scheduleCompletion();
         }
       },
       true,
@@ -294,10 +310,21 @@ if (!(window as any).__vigoghInit) {
       true,
     );
 
-    chrome.runtime.onMessage.addListener((msg) => {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg.action === "extract_page_content") {
+        const maxBytes = msg.maxLength ?? 512 * 1024;
+        const maxLinks = msg.maxLinks ?? 50;
+        sendResponse({
+          pageURL: extractPageURL(),
+          pageContent: extractPageContent(maxBytes),
+          pageMetadata: extractPageMetadata(maxLinks),
+          pageForms: extractPageForms(),
+        });
+        return;
+      }
       if (msg.action === "serious_error_toast") {
         const code = msg.payload?.isAuthError ? "UNAUTHORIZED" : null;
-        emitErrorToastr(code, {
+        toastr.error(code, {
           id: `vigogh-serious-error-${msg.payload?.status ?? 0}`,
         });
       }
@@ -305,21 +332,25 @@ if (!(window as any).__vigoghInit) {
         host.style.visibility = "hidden";
         const bottom = document.getElementById("vigogh-bottom-indicator");
         if (bottom) bottom.style.visibility = "hidden";
-        const config = extensionStore.getState().config;
-        if (config) {
-          showIndicator("page", config);
-          const pageEl = document.getElementById("vigogh-page-indicator");
-          if (pageEl) pageEl.style.visibility = "hidden";
+        if (!msg.silent) {
+          const config = extensionStore.getState().config;
+          if (config) {
+            showIndicator("page", config);
+            const pageEl = document.getElementById("vigogh-page-indicator");
+            if (pageEl) pageEl.style.visibility = "hidden";
+          }
         }
       }
       if (msg.action === "restore_after_capture") {
         host.style.visibility = "";
         const bottom = document.getElementById("vigogh-bottom-indicator");
         if (bottom) bottom.style.visibility = "";
-        const pageEl = document.getElementById("vigogh-page-indicator");
-        if (pageEl) {
-          pageEl.style.visibility = "";
-          setTimeout(() => hideIndicator("page"), 600);
+        if (!msg.silent) {
+          const pageEl = document.getElementById("vigogh-page-indicator");
+          if (pageEl) {
+            pageEl.style.visibility = "";
+            setTimeout(() => hideIndicator("page"), 600);
+          }
         }
       }
     });

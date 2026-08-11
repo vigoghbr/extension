@@ -1,4 +1,4 @@
-import { toast } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import type { FilesFetchBlobResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -55,26 +55,23 @@ export async function triggerAttach(item: AttachableFile): Promise<void> {
   const config = extensionStore.getState().config;
   attachSuppressUntil =
     Date.now() + (config?.behavior.filesAttachDragSuppressMs ?? 5000);
-  const labels = config?.aiMenu.vigoghMenu;
 
-  const loadingId = labels?.filesAttachLoading
-    ? toast.loading(labels.filesAttachLoading)
-    : null;
+  const loadingId = toastr.loading("FILE_ATTACH_LOADING");
 
   const blob = await fetchBlob(item);
   if (!blob) {
-    if (loadingId !== null) toast.dismiss(loadingId);
-    if (labels?.filesAttachFailed) toast.error(labels.filesAttachFailed);
+    toastr.dismiss(loadingId);
+    toastr.error("FILE_ATTACH_FAILED");
     return;
   }
 
   const ok = await attachFileToPage(blob, item.originalFilename, item.mimeType);
-  if (loadingId !== null) toast.dismiss(loadingId);
+  toastr.dismiss(loadingId);
   if (ok) {
     attachSuppressUntil =
       Date.now() + (config?.behavior.filesAttachSuccessSuppressMs ?? 2000);
-    if (labels?.filesAttachSuccess) toast.success(labels.filesAttachSuccess);
+    toastr.success("FILE_ATTACHED");
     return;
   }
-  if (labels?.filesAttachUnavailable) toast.show(labels.filesAttachUnavailable);
+  toastr.neutral("FILE_ATTACH_UNAVAILABLE");
 }

@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import { emitErrorToastr } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import type { ChatCreateResponse, ChatSendResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired } from "@/utils/login-required";
@@ -121,7 +121,7 @@ function createAndSend(trimmed: string): void {
       if (chrome.runtime.lastError || !createRes?.success) {
         const code = createRes?.errorCode;
         if (code) {
-          emitErrorToastr(code);
+          toastr.error(code);
           chatStore.setState({ status: "error", errorCode: code });
           return;
         }
@@ -155,7 +155,7 @@ function doSend(chatId: string, message: string): void {
       if (chrome.runtime.lastError || !sendRes?.success) {
         const code = sendRes?.errorCode;
         if (code) {
-          emitErrorToastr(code);
+          toastr.error(code);
           chatStore.setState({ status: "error", errorCode: code });
           return;
         }

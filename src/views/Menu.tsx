@@ -3,15 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { resolveIcon } from "@/libs/icons";
 import { openSidePanel, requireSession } from "@/libs/sidepanel";
-import {
-  aiMenuStore,
-  closePopover,
-  openChat,
-  openMenu,
-  setActiveInputItem,
-  setDirection,
-  togglePopover,
-} from "@/stores/aiMenuStore";
 import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import {
@@ -23,19 +14,28 @@ import {
   requestAnswers,
   toolsStore,
 } from "@/stores/tools/toolsStore";
+import {
+  closePopover,
+  openChat,
+  openMenu,
+  setActiveInputItem,
+  setDirection,
+  togglePopover,
+  widgetStore,
+} from "@/stores/widgetStore";
 import type {
   AiButtonAppearance,
-  ExtensionStylesAiMenu,
+  ExtensionStylesWidget,
   ThemeColorSet,
 } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { resolveZIndex } from "@/utils/z-index";
-import { popoverTools } from "@/views/tools/popovers";
+import { popoverTools } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 const QUICK_MESSAGES_TOOL_ID = "quick-messages";
 
-export default function VigoghMenu() {
+export default function Menu() {
   const config = useStore(extensionStore, (s) => s.config);
   const styles = useStore(stylesStore, (s) => s.styles);
   const autocompleteDisabled = useStore(extensionStore, (s) => s.disabled);
@@ -44,9 +44,9 @@ export default function VigoghMenu() {
     userToolsEnabled[QUICK_MESSAGES_TOOL_ID] !== false;
   const overlayVisible = useStore(autocompleteStore, (s) => s.overlayVisible);
   const hasEditorText = useStore(toolsStore, (s) => s.hasEditorText);
-  const activePopovers = useStore(aiMenuStore, (s) => s.activePopovers);
-  const chatOpen = useStore(aiMenuStore, (s) => s.chatOpen);
-  const activeInputItem = useStore(aiMenuStore, (s) => s.activeInputItem);
+  const activePopovers = useStore(widgetStore, (s) => s.activePopovers);
+  const chatOpen = useStore(widgetStore, (s) => s.chatOpen);
+  const activeInputItem = useStore(widgetStore, (s) => s.activeInputItem);
   const [pos, setPos] = useState<{ bottom: number; right: number } | null>(
     null,
   );
@@ -102,42 +102,42 @@ export default function VigoghMenu() {
   }, [menuOpen]);
 
   if (!config || !styles) return null;
-  const vigoghMenu = config.aiMenu.vigoghMenu;
-  if (!vigoghMenu) return null;
+  const menu = config.widget.menu;
+  if (!menu) return null;
 
   const handleItemClick = (action: () => void) => () => {
     action();
     setMenuOpen(false);
   };
 
-  const aiMenuConfig = config.aiMenu;
+  const widgetConfig = config.widget;
   const colors: ThemeColorSet = resolveThemeColors(config, appearance);
 
-  const effectiveBottom = pos?.bottom ?? parseFloat(aiMenuConfig.bottom);
-  const effectiveRight = pos?.right ?? parseFloat(aiMenuConfig.right);
-  const shineDuration = aiMenuConfig.shineDuration;
-  const sweepDuration = aiMenuConfig.sweepDuration;
-  const loadingDuration = aiMenuConfig.loadingAnimation.duration;
+  const effectiveBottom = pos?.bottom ?? parseFloat(widgetConfig.bottom);
+  const effectiveRight = pos?.right ?? parseFloat(widgetConfig.right);
+  const shineDuration = widgetConfig.shineDuration;
+  const sweepDuration = widgetConfig.sweepDuration;
+  const loadingDuration = widgetConfig.loadingAnimation.duration;
 
-  const circleSize = styles.aiMenu.baseCircleSize;
+  const circleSize = styles.widget.baseCircleSize;
   const effectiveMenuWidth = Math.max(
-    styles.aiMenu.menuWidthMin,
+    styles.widget.menuWidthMin,
     Math.round(
-      circleSize * (styles.aiMenu.menuWidth / styles.aiMenu.circleSize),
+      circleSize * (styles.widget.menuWidth / styles.widget.circleSize),
     ),
   );
-  const pillWidth = effectiveMenuWidth + styles.aiMenu.pillPadding * 2;
-  const popoverRight = effectiveRight + pillWidth + styles.aiMenu.popoverGap;
-  const pillFontSize = styles.aiMenu.baseFontSize;
-  const pillIconSize = styles.aiMenu.baseIconSize;
-  const pillPaddingV = styles.aiMenu.basePaddingV;
-  const pillPaddingH = styles.aiMenu.basePaddingH;
-  const logoHeight = styles.aiMenu.logoHeight;
-  const scaledGap = styles.aiMenu.pillGap;
-  const pillBorderRadius = styles.aiMenu.pillBorderRadius;
+  const pillWidth = effectiveMenuWidth + styles.widget.pillPadding * 2;
+  const popoverRight = effectiveRight + pillWidth + styles.widget.popoverGap;
+  const pillFontSize = styles.widget.baseFontSize;
+  const pillIconSize = styles.widget.baseIconSize;
+  const pillPaddingV = styles.widget.basePaddingV;
+  const pillPaddingH = styles.widget.basePaddingH;
+  const logoHeight = styles.widget.logoHeight;
+  const scaledGap = styles.widget.pillGap;
+  const pillBorderRadius = styles.widget.pillBorderRadius;
 
-  const menuLabels = vigoghMenu;
-  const menuBorderRadius = aiMenuConfig.menuBorderRadius;
+  const menuLabels = menu;
+  const menuBorderRadius = widgetConfig.menuBorderRadius;
 
   const cssVars = `
 :host {
@@ -165,8 +165,8 @@ export default function VigoghMenu() {
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     let moved = false;
-    const MARGIN = styles.aiMenu.dragMarginPx;
-    const threshold = styles.aiMenu.dragThresholdPx;
+    const MARGIN = styles.widget.dragMarginPx;
+    const threshold = styles.widget.dragThresholdPx;
     const onMove = (ev: MouseEvent) => {
       if (
         !moved &&
@@ -197,7 +197,7 @@ export default function VigoghMenu() {
     document.addEventListener("mouseup", onUp, true);
   };
 
-  const aiMenuZIndex = resolveZIndex(
+  const widgetZIndex = resolveZIndex(
     { isHovered: menuOpen || menuHovered },
     styles.zLayers,
   );
@@ -213,7 +213,7 @@ export default function VigoghMenu() {
           position: "fixed",
           bottom: `${effectiveBottom}px`,
           right: `${effectiveRight}px`,
-          zIndex: aiMenuZIndex,
+          zIndex: widgetZIndex,
           width: `${circleSize}px`,
           height: `${circleSize}px`,
           borderRadius: "50%",
@@ -221,21 +221,21 @@ export default function VigoghMenu() {
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          background: `linear-gradient(${styles.aiMenu.circleOverlay}, ${styles.aiMenu.circleOverlay}), linear-gradient(135deg, ${colors.buttonColor1}, ${colors.buttonColor2})`,
+          background: `linear-gradient(${styles.widget.circleOverlay}, ${styles.widget.circleOverlay}), linear-gradient(135deg, ${colors.buttonColor1}, ${colors.buttonColor2})`,
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           border: `1px solid ${colors.menuBorderColor}`,
           boxShadow: colors.containerShadow,
           opacity: menuOpen ? 0 : 0.45,
           transform: menuOpen
-            ? `scale(${styles.aiMenu.circleClosedScale})`
+            ? `scale(${styles.widget.circleClosedScale})`
             : "scale(1)",
-          transition: `opacity ${styles.aiMenu.circleTransitionMs}ms ease, transform ${styles.aiMenu.circleTransitionMs}ms ease`,
+          transition: `opacity ${styles.widget.circleTransitionMs}ms ease, transform ${styles.widget.circleTransitionMs}ms ease`,
           pointerEvents: menuOpen ? "none" : "auto",
         }}
         onMouseEnter={() => setMenuOpen(true)}
         onClick={() =>
-          window.open(aiMenuConfig.appUrl, "_blank", "noopener,noreferrer")
+          window.open(widgetConfig.appUrl, "_blank", "noopener,noreferrer")
         }
       >
         <img
@@ -245,8 +245,8 @@ export default function VigoghMenu() {
               : "icon128.png",
           )}
           style={{
-            width: `${styles.aiMenu.circleIconSize}px`,
-            height: `${styles.aiMenu.circleIconSize}px`,
+            width: `${styles.widget.circleIconSize}px`,
+            height: `${styles.widget.circleIconSize}px`,
             objectFit: "contain",
             display: "block",
             pointerEvents: "none",
@@ -261,13 +261,13 @@ export default function VigoghMenu() {
           position: "fixed",
           bottom: `${effectiveBottom}px`,
           right: `${effectiveRight}px`,
-          zIndex: aiMenuZIndex,
+          zIndex: widgetZIndex,
           display: "flex",
           flexDirection: "column",
           alignItems: "stretch",
-          gap: `${styles.aiMenu.pillGap}px`,
-          padding: `${styles.aiMenu.pillPadding}px`,
-          minWidth: `${effectiveMenuWidth + styles.aiMenu.pillPadding * 2}px`,
+          gap: `${styles.widget.pillGap}px`,
+          padding: `${styles.widget.pillPadding}px`,
+          minWidth: `${effectiveMenuWidth + styles.widget.pillPadding * 2}px`,
           background: colors.menuBackground,
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
@@ -278,9 +278,9 @@ export default function VigoghMenu() {
           opacity: menuOpen ? 1 : 0,
           transform: menuOpen
             ? "scale(1)"
-            : `scale(${styles.aiMenu.menuClosedScale})`,
+            : `scale(${styles.widget.menuClosedScale})`,
           transformOrigin: "bottom right",
-          transition: `opacity ${styles.aiMenu.menuTransitionMs}ms ease, transform ${styles.aiMenu.menuTransitionMs}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+          transition: `opacity ${styles.widget.menuTransitionMs}ms ease, transform ${styles.widget.menuTransitionMs}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
           pointerEvents: menuOpen ? "auto" : "none",
         }}
         onMouseEnter={() => setMenuHovered(true)}
@@ -290,7 +290,7 @@ export default function VigoghMenu() {
           c1={colors.buttonColor1}
           c2={colors.buttonColor2}
           paused={!menuHovered}
-          orbs={styles.aiMenu.panelOrbs}
+          orbs={styles.widget.panelOrbs}
         />
         <div
           style={{
@@ -313,7 +313,7 @@ export default function VigoghMenu() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: styles.aiMenu.logoButtonPadding,
+                  padding: styles.widget.logoButtonPadding,
                   flexShrink: 0,
                   background: "transparent",
                 }}
@@ -337,7 +337,7 @@ export default function VigoghMenu() {
             <TooltipContent>{config.messages.info.DRAG_LABEL}</TooltipContent>
           </Tooltip>
 
-          {aiMenuConfig.tools
+          {widgetConfig.tools
             .filter((item) => item.enabled !== false)
             .map((item) => {
               const Icon = resolveIcon(item.icon);
@@ -349,8 +349,8 @@ export default function VigoghMenu() {
                     label={item.label ?? ""}
                     active={activeInputItem?.id === item.id}
                     activeBackground={colors.accentActiveBackground}
-                    activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-                    hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+                    activeBorderColor={styles.widget.pillActiveBorderColor}
+                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
                     hoverBg={colors.itemSecondaryHoverBackground}
                     textColor={colors.textColor}
                     fontSize={pillFontSize}
@@ -386,8 +386,8 @@ export default function VigoghMenu() {
                     label={item.label ?? ""}
                     active={!autocompleteDisabled}
                     activeBackground={colors.toggleEnabledBackground}
-                    activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-                    hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+                    activeBorderColor={styles.widget.pillActiveBorderColor}
+                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
                     hoverBg={colors.itemSecondaryHoverBackground}
                     textColor={colors.textColor}
                     fontSize={pillFontSize}
@@ -406,8 +406,8 @@ export default function VigoghMenu() {
                     label={item.label ?? ""}
                     active={item.linkAction === "open_chat" && chatOpen}
                     activeBackground={colors.toggleEnabledBackground}
-                    activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-                    hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+                    activeBorderColor={styles.widget.pillActiveBorderColor}
+                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
                     hoverBg={colors.itemSecondaryHoverBackground}
                     textColor={colors.textColor}
                     fontSize={pillFontSize}
@@ -423,7 +423,7 @@ export default function VigoghMenu() {
                       } else if (item.linkAction === "open_app") {
                         closePopover();
                         window.open(
-                          aiMenuConfig.appUrl,
+                          widgetConfig.appUrl,
                           "_blank",
                           "noopener,noreferrer",
                         );
@@ -443,8 +443,8 @@ export default function VigoghMenu() {
             label={menuLabels.filesLabel}
             active={activePopovers.includes("files")}
             activeBackground={colors.toggleEnabledBackground}
-            activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-            hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+            activeBorderColor={styles.widget.pillActiveBorderColor}
+            hoverTransitionMs={styles.widget.pillHoverTransitionMs}
             hoverBg={colors.itemSecondaryHoverBackground}
             textColor={colors.textColor}
             fontSize={pillFontSize}
@@ -460,8 +460,8 @@ export default function VigoghMenu() {
             label={menuLabels.notesLabel}
             active={activePopovers.includes("notes")}
             activeBackground={colors.toggleEnabledBackground}
-            activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-            hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+            activeBorderColor={styles.widget.pillActiveBorderColor}
+            hoverTransitionMs={styles.widget.pillHoverTransitionMs}
             hoverBg={colors.itemSecondaryHoverBackground}
             textColor={colors.textColor}
             fontSize={pillFontSize}
@@ -478,8 +478,8 @@ export default function VigoghMenu() {
               label={menuLabels.messagesLabel}
               active={activePopovers.includes("messages")}
               activeBackground={colors.toggleEnabledBackground}
-              activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-              hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+              activeBorderColor={styles.widget.pillActiveBorderColor}
+              hoverTransitionMs={styles.widget.pillHoverTransitionMs}
               hoverBg={colors.itemSecondaryHoverBackground}
               textColor={colors.textColor}
               fontSize={pillFontSize}
@@ -493,7 +493,7 @@ export default function VigoghMenu() {
           )}
 
           {hasEditorText &&
-            aiMenuConfig.transforms.filter((item) => item.enabled !== false)
+            widgetConfig.transforms.filter((item) => item.enabled !== false)
               .length > 0 && (
               <>
                 <div
@@ -503,7 +503,7 @@ export default function VigoghMenu() {
                     margin: "2px 4px",
                   }}
                 />
-                {aiMenuConfig.transforms
+                {widgetConfig.transforms
                   .filter((item) => item.enabled !== false)
                   .map((item) => {
                     const Icon = resolveIcon(item.icon);
@@ -514,8 +514,8 @@ export default function VigoghMenu() {
                         label={item.label ?? ""}
                         active={false}
                         activeBackground={colors.accentActiveBackground}
-                        activeBorderColor={styles.aiMenu.pillActiveBorderColor}
-                        hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+                        activeBorderColor={styles.widget.pillActiveBorderColor}
+                        hoverTransitionMs={styles.widget.pillHoverTransitionMs}
                         hoverBg={colors.itemSecondaryHoverBackground}
                         textColor={colors.textColor}
                         fontSize={pillFontSize}
@@ -555,7 +555,7 @@ export default function VigoghMenu() {
             paddingV={pillPaddingV}
             paddingH={pillPaddingH}
             borderRadius={pillBorderRadius}
-            hoverTransitionMs={styles.aiMenu.pillHoverTransitionMs}
+            hoverTransitionMs={styles.widget.pillHoverTransitionMs}
             onClick={handleItemClick(() => {
               if (!isExtensionContextValid()) return;
               void openSidePanel();
@@ -575,7 +575,7 @@ export default function VigoghMenu() {
               <tool.Popover
                 key={tool.popoverId}
                 colors={colors}
-                config={aiMenuConfig}
+                config={widgetConfig}
                 label={tool.getLabel(menuLabels)}
                 bottom={effectiveBottom + stackOffset}
                 right={popoverRight + stackOffset}
@@ -739,7 +739,7 @@ function PanelGlassOrbs({
   c1: string;
   c2: string;
   paused: boolean;
-  orbs: ExtensionStylesAiMenu["panelOrbs"];
+  orbs: ExtensionStylesWidget["panelOrbs"];
 }) {
   const state = paused ? "paused" : "running";
   return (

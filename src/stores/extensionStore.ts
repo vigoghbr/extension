@@ -1,5 +1,9 @@
 import { createStore } from "zustand/vanilla";
 import { BASE_URL } from "@/libs/constants";
+import {
+  type IdentifyFieldHandle,
+  identifyField,
+} from "@/libs/field-identifier";
 import { getLocale, getLocaleArray } from "@/libs/locale";
 import { setStyles } from "@/stores/stylesStore";
 import type {
@@ -25,22 +29,19 @@ import type {
   UserToolPreferences,
 } from "@/types";
 import { SiteEngine } from "@/utils/engine";
-import { GeneralInputStrategy } from "@/utils/general-strategy";
+import {
+  DEFAULT_GENERAL_SELECTOR,
+  GeneralInputStrategy,
+} from "@/utils/general-strategy";
 import { showIndicator } from "@/utils/indicators";
 import { matchSite } from "@/utils/site-match";
-
-const editorChangeListeners: Array<() => void> = [];
-
-export function onEditorChange(listener: () => void): void {
-  editorChangeListeners.push(listener);
-}
 
 interface ExtensionState {
   config: ResolvedExtensionSettings | null;
   siteConfig: SiteConfig | null;
   currentEditor: Element | null;
-  aiMenuEnabled: boolean;
-  aiMenuVisible: boolean;
+  widgetEnabled: boolean;
+  widgetVisible: boolean;
   aiButtonEnabled: boolean;
   editorFocused: boolean;
   caretCoordinates: CaretCoordinates | null;
@@ -55,8 +56,8 @@ export const extensionStore = createStore<ExtensionState>()(() => ({
   config: null,
   siteConfig: null,
   currentEditor: null,
-  aiMenuEnabled: false,
-  aiMenuVisible: false,
+  widgetEnabled: false,
+  widgetVisible: false,
   aiButtonEnabled: true,
   editorFocused: false,
   caretCoordinates: null,
@@ -74,32 +75,53 @@ export function setPageIndicatorActive(active: boolean): void {
 let strategy: SiteStrategy | null = null;
 let generalStrategy: GeneralInputStrategy | null = null;
 let activeStrategy: SiteStrategy | null = null;
-let cleanupObserver: (() => void) | null = null;
 
 export function getActiveStrategy(): SiteStrategy | null {
   return activeStrategy;
+}
+
+export function resolveStrategyForElement(
+  editor: Element,
+): SiteStrategy | null {
+  const { siteConfig } = extensionStore.getState();
+  const siteSelector = siteConfig?.editorSelector;
+  const usesSiteStrategy =
+    !!siteSelector &&
+    (editor.matches(siteSelector) || !!editor.closest(siteSelector));
+  return usesSiteStrategy ? strategy : generalStrategy;
+}
+
+export function resolveTargetField(toastCode: string): IdentifyFieldHandle {
+  const { siteConfig } = extensionStore.getState();
+  if (siteConfig?.editorSelector) {
+    const editor = document.querySelector(
+      siteConfig.editorSelector,
+    ) as HTMLElement | null;
+    if (editor) {
+      return { promise: Promise.resolve(editor), cancel: () => {} };
+    }
+  }
+  return identifyField(toastCode);
 }
 
 export function resolveEditorWithStrategy(): {
   editor: HTMLElement | null;
   strategy: SiteStrategy | null;
 } {
-  const { currentEditor } = extensionStore.getState();
+  const { currentEditor, siteConfig } = extensionStore.getState();
   if (currentEditor) {
     return { editor: currentEditor as HTMLElement, strategy: activeStrategy };
   }
-  const siteSelector = strategy?.getEditorSelector();
-  if (siteSelector) {
-    const editor = document.querySelector(siteSelector) as HTMLElement | null;
+  if (siteConfig?.editorSelector) {
+    const editor = document.querySelector(
+      siteConfig.editorSelector,
+    ) as HTMLElement | null;
     if (editor) return { editor, strategy };
   }
-  const generalSelector = generalStrategy?.getEditorSelector();
-  if (generalSelector) {
-    const editor = document.querySelector(
-      generalSelector,
-    ) as HTMLElement | null;
-    if (editor) return { editor, strategy: generalStrategy };
-  }
+  const editor = document.querySelector(
+    DEFAULT_GENERAL_SELECTOR,
+  ) as HTMLElement | null;
+  if (editor) return { editor, strategy: generalStrategy };
   return { editor: null, strategy: null };
 }
 
@@ -187,8 +209,8 @@ function mergeLocales(
   config: ExtensionSettings,
   locales: ExtensionLocales,
 ): ExtensionSettings {
-  const tools = (config.aiMenu?.tools ?? []).map((tool) => {
-    const tl = locales.aiMenu.tools[tool.id];
+  const tools = (config.widget?.tools ?? []).map((tool) => {
+    const tl = locales.widget.tools[tool.id];
     if (!tl) return tool;
     if (tool.type === "answer" && tool.pages) {
       return {
@@ -226,19 +248,19 @@ function mergeLocales(
       autocompletePageTitle: locales.overlay.autocompletePageTitle,
       acceptHint: locales.overlay.acceptHint,
     },
-    aiMenu: {
-      ...config.aiMenu,
-      transformsNoSelectionTooltip: locales.aiMenu.transformsNoSelectionTooltip,
+    widget: {
+      ...config.widget,
+      transformsNoSelectionTooltip: locales.widget.transformsNoSelectionTooltip,
       tools,
-      transforms: (config.aiMenu?.transforms ?? []).map((t) => ({
+      transforms: (config.widget?.transforms ?? []).map((t) => ({
         ...t,
-        label: locales.aiMenu.transforms[t.id]?.label ?? t.label,
+        label: locales.widget.transforms[t.id]?.label ?? t.label,
       })),
-      links: (config.aiMenu?.links ?? []).map((l) => ({
+      links: (config.widget?.links ?? []).map((l) => ({
         ...l,
-        label: locales.aiMenu.links[l.id]?.label ?? l.label,
+        label: locales.widget.links[l.id]?.label ?? l.label,
       })),
-      vigoghMenu: locales.aiMenu.vigoghMenu,
+      menu: locales.widget.menu,
     },
   };
 }
@@ -247,9 +269,9 @@ export function resolveConfig(
   raw: ExtensionSettings,
   styles: ExtensionStyles,
 ): ResolvedExtensionSettings {
-  const rawAiMenu = raw.aiMenu ?? {};
+  const rawWidget = raw.widget ?? {};
   const rawBorder = raw.indicators?.page?.border ?? {};
-  const rawLoadingAnim = rawAiMenu.loadingAnimation ?? {};
+  const rawLoadingAnim = rawWidget.loadingAnimation ?? {};
   const rawFallback = raw.sitesFallback ?? {};
   const rawMessages = raw.messages ?? {};
 
@@ -303,7 +325,8 @@ export function resolveConfig(
       filesUploadPollAttempts: raw.behavior.filesUploadPollAttempts,
       filesUploadPollIntervalMs: raw.behavior.filesUploadPollIntervalMs,
       windowDragMarginPx: raw.behavior.windowDragMarginPx,
-      mainContentLimit: raw.behavior.mainContentLimit,
+      pageContentMaxSizeKB: raw.behavior.pageContentMaxSizeKB,
+      pageScreenshotMaxSizeKB: raw.behavior.pageScreenshotMaxSizeKB,
       maxLinks: raw.behavior.maxLinks,
     },
     overlay: {
@@ -321,38 +344,38 @@ export function resolveConfig(
       badgeGap: raw.overlay.badgeGap ?? 4,
       badgeSafetyPad: raw.overlay.badgeSafetyPad ?? 4,
     },
-    aiMenu: {
-      enabled: rawAiMenu.enabled,
-      bottom: rawAiMenu.bottom ?? styles.aiMenu.bottom,
-      right: rawAiMenu.right ?? styles.aiMenu.right,
-      width: rawAiMenu.width,
-      height: rawAiMenu.height ?? styles.aiMenu.height,
-      iconSize: rawAiMenu.iconSize ?? styles.aiMenu.iconSize,
-      iconUrl: chrome.runtime.getURL(rawAiMenu.iconUrl || "white-icon128.png"),
-      shineDuration: rawAiMenu.shineDuration ?? styles.aiMenu.shineDuration,
-      sweepDuration: rawAiMenu.sweepDuration ?? styles.aiMenu.sweepDuration,
+    widget: {
+      enabled: rawWidget.enabled,
+      bottom: rawWidget.bottom ?? styles.widget.bottom,
+      right: rawWidget.right ?? styles.widget.right,
+      width: rawWidget.width,
+      height: rawWidget.height ?? styles.widget.height,
+      iconSize: rawWidget.iconSize ?? styles.widget.iconSize,
+      iconUrl: chrome.runtime.getURL(rawWidget.iconUrl || "white-icon128.png"),
+      shineDuration: rawWidget.shineDuration ?? styles.widget.shineDuration,
+      sweepDuration: rawWidget.sweepDuration ?? styles.widget.sweepDuration,
       loadingAnimation: {
         enabled: rawLoadingAnim.enabled,
-        duration: rawLoadingAnim.duration ?? styles.aiMenu.loadingDuration,
+        duration: rawLoadingAnim.duration ?? styles.widget.loadingDuration,
       },
-      borderRadius: rawAiMenu.borderRadius,
+      borderRadius: rawWidget.borderRadius,
       menuBorderRadius:
-        rawAiMenu.menuBorderRadius ?? styles.aiMenu.menuBorderRadius,
-      menuMinWidth: rawAiMenu.menuMinWidth ?? styles.aiMenu.menuMinWidth,
-      menuMaxWidth: rawAiMenu.menuMaxWidth ?? styles.aiMenu.menuMaxWidth,
-      appUrl: rawAiMenu.appUrl ?? `${BASE_URL}/app`,
+        rawWidget.menuBorderRadius ?? styles.widget.menuBorderRadius,
+      menuMinWidth: rawWidget.menuMinWidth ?? styles.widget.menuMinWidth,
+      menuMaxWidth: rawWidget.menuMaxWidth ?? styles.widget.menuMaxWidth,
+      appUrl: rawWidget.appUrl ?? `${BASE_URL}/app`,
       transformsTooltipDelayMs:
-        rawAiMenu.transformsTooltipDelayMs ??
-        styles.aiMenu.transformsTooltipDelayMs,
+        rawWidget.transformsTooltipDelayMs ??
+        styles.widget.transformsTooltipDelayMs,
       defaultAdditionalInputMaxLength:
-        rawAiMenu.defaultAdditionalInputMaxLength ?? 1000,
+        rawWidget.defaultAdditionalInputMaxLength ?? 1000,
       transformsNoSelectionTooltip: getLocale(
-        rawAiMenu.transformsNoSelectionTooltip,
+        rawWidget.transformsNoSelectionTooltip,
       ),
-      chat: { maxLength: rawAiMenu.chat!.maxLength },
-      quickMessages: { maxLength: rawAiMenu.quickMessages!.maxLength },
-      tools: (rawAiMenu.tools ?? []).map((t) => resolveTool(t)),
-      transforms: (rawAiMenu.transforms ?? []).map(
+      chat: { maxLength: rawWidget.chat!.maxLength },
+      quickMessages: { maxLength: rawWidget.quickMessages!.maxLength },
+      tools: (rawWidget.tools ?? []).map((t) => resolveTool(t)),
+      transforms: (rawWidget.transforms ?? []).map(
         (t): ResolvedTransformItemConfig => ({
           id: t.id,
           enabled: t.enabled,
@@ -362,7 +385,7 @@ export function resolveConfig(
           autoApply: t.autoApply,
         }),
       ),
-      links: (rawAiMenu.links ?? []).map(
+      links: (rawWidget.links ?? []).map(
         (l): ResolvedLinkItemConfig => ({
           id: l.id,
           enabled: l.enabled,
@@ -372,94 +395,53 @@ export function resolveConfig(
           href: l.href,
         }),
       ),
-      vigoghMenu: rawAiMenu.vigoghMenu
+      menu: rawWidget.menu
         ? {
-            filesLabel: getLocale(rawAiMenu.vigoghMenu.filesLabel),
-            filesSendLabel: getLocale(rawAiMenu.vigoghMenu.filesSendLabel),
-            filesEditLabel: getLocale(rawAiMenu.vigoghMenu.filesEditLabel),
-            filesAIEnableLabel: getLocale(
-              rawAiMenu.vigoghMenu.filesAIEnableLabel,
-            ),
-            filesAIDisableLabel: getLocale(
-              rawAiMenu.vigoghMenu.filesAIDisableLabel,
-            ),
-            filesDeleteLabel: getLocale(rawAiMenu.vigoghMenu.filesDeleteLabel),
+            filesLabel: getLocale(rawWidget.menu.filesLabel),
+            filesSendLabel: getLocale(rawWidget.menu.filesSendLabel),
+            filesEditLabel: getLocale(rawWidget.menu.filesEditLabel),
+            filesAIEnableLabel: getLocale(rawWidget.menu.filesAIEnableLabel),
+            filesAIDisableLabel: getLocale(rawWidget.menu.filesAIDisableLabel),
+            filesDeleteLabel: getLocale(rawWidget.menu.filesDeleteLabel),
             filesDeleteConfirmLabel: getLocale(
-              rawAiMenu.vigoghMenu.filesDeleteConfirmLabel,
+              rawWidget.menu.filesDeleteConfirmLabel,
             ),
-            filesAttachHint: getLocale(rawAiMenu.vigoghMenu.filesAttachHint),
-            filesAttachUnavailable: getLocale(
-              rawAiMenu.vigoghMenu.filesAttachUnavailable,
-            ),
-            filesUploadLoading: getLocale(
-              rawAiMenu.vigoghMenu.filesUploadLoading,
-            ),
-            filesUploadSuccess: getLocale(
-              rawAiMenu.vigoghMenu.filesUploadSuccess,
-            ),
-            filesDeleteSuccess: getLocale(
-              rawAiMenu.vigoghMenu.filesDeleteSuccess,
-            ),
-            filesRenameSuccess: getLocale(
-              rawAiMenu.vigoghMenu.filesRenameSuccess,
-            ),
-            filesAttachLoading: getLocale(
-              rawAiMenu.vigoghMenu.filesAttachLoading,
-            ),
-            filesAttachSuccess: getLocale(
-              rawAiMenu.vigoghMenu.filesAttachSuccess,
-            ),
-            filesAttachFailed: getLocale(
-              rawAiMenu.vigoghMenu.filesAttachFailed,
-            ),
-            filesPasteHint: getLocale(rawAiMenu.vigoghMenu.filesPasteHint),
-            messagesLabel: getLocale(rawAiMenu.vigoghMenu.messagesLabel),
-            messagesAttachHint: getLocale(
-              rawAiMenu.vigoghMenu.messagesAttachHint,
-            ),
-            notesLabel: getLocale(rawAiMenu.vigoghMenu.notesLabel),
-            notesPinHint: getLocale(rawAiMenu.vigoghMenu.notesPinHint),
-            notesAIEnableLabel: getLocale(
-              rawAiMenu.vigoghMenu.notesAIEnableLabel,
-            ),
-            notesAIDisableLabel: getLocale(
-              rawAiMenu.vigoghMenu.notesAIDisableLabel,
-            ),
-            aiLabel: getLocale(rawAiMenu.vigoghMenu.aiLabel),
-            panelLabel: getLocale(rawAiMenu.vigoghMenu.panelLabel),
-            disclaimerText: getLocale(rawAiMenu.vigoghMenu.disclaimerText),
-            chatDisclaimerText: getLocale(
-              rawAiMenu.vigoghMenu.chatDisclaimerText,
-            ),
-            chatEmptyHelp: getLocale(rawAiMenu.vigoghMenu.chatEmptyHelp),
-            chatEmptyExamples: getLocaleArray(
-              rawAiMenu.vigoghMenu.chatEmptyExamples,
-            ),
-            chatPlaceholder: getLocale(rawAiMenu.vigoghMenu.chatPlaceholder),
-            chatSend: getLocale(rawAiMenu.vigoghMenu.chatSend),
-            chatBack: getLocale(rawAiMenu.vigoghMenu.chatBack),
-            chatNewConversation: getLocale(
-              rawAiMenu.vigoghMenu.chatNewConversation,
-            ),
+            filesAttachHint: getLocale(rawWidget.menu.filesAttachHint),
+            filesUploadSuccess: getLocale(rawWidget.menu.filesUploadSuccess),
+            filesDeleteSuccess: getLocale(rawWidget.menu.filesDeleteSuccess),
+            filesRenameSuccess: getLocale(rawWidget.menu.filesRenameSuccess),
+            filesPasteHint: getLocale(rawWidget.menu.filesPasteHint),
+            messagesLabel: getLocale(rawWidget.menu.messagesLabel),
+            messagesAttachHint: getLocale(rawWidget.menu.messagesAttachHint),
+            notesLabel: getLocale(rawWidget.menu.notesLabel),
+            notesPinHint: getLocale(rawWidget.menu.notesPinHint),
+            notesAIEnableLabel: getLocale(rawWidget.menu.notesAIEnableLabel),
+            notesAIDisableLabel: getLocale(rawWidget.menu.notesAIDisableLabel),
+            aiLabel: getLocale(rawWidget.menu.aiLabel),
+            panelLabel: getLocale(rawWidget.menu.panelLabel),
+            disclaimerText: getLocale(rawWidget.menu.disclaimerText),
+            chatDisclaimerText: getLocale(rawWidget.menu.chatDisclaimerText),
+            chatEmptyHelp: getLocale(rawWidget.menu.chatEmptyHelp),
+            chatEmptyExamples: getLocaleArray(rawWidget.menu.chatEmptyExamples),
+            chatPlaceholder: getLocale(rawWidget.menu.chatPlaceholder),
+            chatSend: getLocale(rawWidget.menu.chatSend),
+            chatBack: getLocale(rawWidget.menu.chatBack),
+            chatNewConversation: getLocale(rawWidget.menu.chatNewConversation),
             chatNewConversationStarted: getLocale(
-              rawAiMenu.vigoghMenu.chatNewConversationStarted,
+              rawWidget.menu.chatNewConversationStarted,
             ),
-            chatCopyTooltip: getLocale(rawAiMenu.vigoghMenu.chatCopyTooltip),
-            chatCopied: getLocale(rawAiMenu.vigoghMenu.chatCopied),
-            editTooltip: getLocale(rawAiMenu.vigoghMenu.editTooltip),
-            deleteTooltip: getLocale(rawAiMenu.vigoghMenu.deleteTooltip),
-            cancelLabel: getLocale(rawAiMenu.vigoghMenu.cancelLabel),
-            saveLabel: getLocale(rawAiMenu.vigoghMenu.saveLabel),
-            savingLabel: getLocale(rawAiMenu.vigoghMenu.savingLabel),
-            messagesNewTooltip: getLocale(
-              rawAiMenu.vigoghMenu.messagesNewTooltip,
-            ),
-            messagesEmpty: getLocale(rawAiMenu.vigoghMenu.messagesEmpty),
-            messagesPlaceholder: getLocale(
-              rawAiMenu.vigoghMenu.messagesPlaceholder,
-            ),
-            notesEmpty: getLocale(rawAiMenu.vigoghMenu.notesEmpty),
-            noteEmptyLabel: getLocale(rawAiMenu.vigoghMenu.noteEmptyLabel),
+            chatCopyTooltip: getLocale(rawWidget.menu.chatCopyTooltip),
+            chatCopied: getLocale(rawWidget.menu.chatCopied),
+            editTooltip: getLocale(rawWidget.menu.editTooltip),
+            deleteTooltip: getLocale(rawWidget.menu.deleteTooltip),
+            cancelLabel: getLocale(rawWidget.menu.cancelLabel),
+            saveLabel: getLocale(rawWidget.menu.saveLabel),
+            savingLabel: getLocale(rawWidget.menu.savingLabel),
+            messagesNewTooltip: getLocale(rawWidget.menu.messagesNewTooltip),
+            messagesEmpty: getLocale(rawWidget.menu.messagesEmpty),
+            messagesPlaceholder: getLocale(rawWidget.menu.messagesPlaceholder),
+            notesEmpty: getLocale(rawWidget.menu.notesEmpty),
+            noteEmptyLabel: getLocale(rawWidget.menu.noteEmptyLabel),
           }
         : undefined,
     },
@@ -486,14 +468,15 @@ export function resolveConfig(
     },
     themes: styles.themes,
     sitesFallback: {
-      editorSelector: rawFallback.editorSelector,
-      editorType: rawFallback.editorType,
       fileAttach: rawFallback.fileAttach,
     } as ResolvedSitesFallbackConfig,
   };
 }
 
-export function loadConfig(onAutocompleteRestored?: () => void): void {
+export function loadConfig(
+  onAutocompleteRestored?: () => void,
+  onLoaded?: () => void,
+): void {
   chrome.storage.local
     .get<{
       "vigogh-settings"?: ExtensionSettings;
@@ -546,11 +529,11 @@ export function loadConfig(onAutocompleteRestored?: () => void): void {
 
       const userPrefs = stored["vigogh-tool-preferences"];
       if (userPrefs) {
-        config.aiMenu.tools = config.aiMenu.tools.map((tool) => {
+        config.widget.tools = config.widget.tools.map((tool) => {
           const override = userPrefs.toolsEnabled[tool.id];
           return override === undefined ? tool : { ...tool, enabled: override };
         });
-        config.aiMenu.transforms = config.aiMenu.transforms.map((t) => {
+        config.widget.transforms = config.widget.transforms.map((t) => {
           const override = userPrefs.transformsEnabled[t.id];
           return override === undefined ? t : { ...t, enabled: override };
         });
@@ -569,18 +552,18 @@ export function loadConfig(onAutocompleteRestored?: () => void): void {
       const hostname = window.location.hostname;
       const matchedSite = matchSite(hostname, config.sites);
 
-      const aiMenuEnabled = true;
+      const widgetEnabled = true;
       const aiButtonEnabled = stored["vigogh-ai-button-enabled"] ?? true;
 
       extensionStore.setState({
         config,
-        aiMenuEnabled,
-        aiMenuVisible: aiMenuEnabled,
+        widgetEnabled,
+        widgetVisible: widgetEnabled,
         aiButtonEnabled,
       });
 
       if (config.behavior.enabled) {
-        generalStrategy = new GeneralInputStrategy(config.sitesFallback);
+        generalStrategy = new GeneralInputStrategy();
 
         if (matchedSite) {
           strategy = new SiteEngine(matchedSite);
@@ -590,13 +573,13 @@ export function loadConfig(onAutocompleteRestored?: () => void): void {
         const persistedAutocompleteEnabled =
           stored["vigogh-autocomplete-enabled"] ?? false;
         const { sessionAutocompleteEnabled } = extensionStore.getState();
-        const autocompleteEnabled =
-          sessionAutocompleteEnabled || persistedAutocompleteEnabled;
+        const needsRestore =
+          persistedAutocompleteEnabled && !sessionAutocompleteEnabled;
         extensionStore.setState({
-          disabled: !autocompleteEnabled,
-          sessionAutocompleteEnabled: autocompleteEnabled,
+          disabled: !sessionAutocompleteEnabled,
+          sessionAutocompleteEnabled,
         });
-        if (autocompleteEnabled && !sessionAutocompleteEnabled) {
+        if (needsRestore) {
           onAutocompleteRestored?.();
         }
         tryAttachToActiveElement();
@@ -606,16 +589,12 @@ export function loadConfig(onAutocompleteRestored?: () => void): void {
           disabled: true,
         });
       }
+      onLoaded?.();
     })
     .catch(() => {});
 }
 
 export function setCurrentEditor(editor: Element | null): void {
-  if (cleanupObserver) {
-    cleanupObserver();
-    cleanupObserver = null;
-  }
-
   if (!editor) {
     activeStrategy = null;
     extensionStore.setState((s) => ({
@@ -630,22 +609,9 @@ export function setCurrentEditor(editor: Element | null): void {
   const prevEditor = extensionStore.getState().currentEditor;
   if (prevEditor === editor) return;
 
-  const siteSelector = strategy?.getEditorSelector();
-  const usesSiteStrategy =
-    !!siteSelector &&
-    (editor.matches(siteSelector) || !!editor.closest(siteSelector));
-  activeStrategy = usesSiteStrategy ? strategy : generalStrategy;
+  activeStrategy = resolveStrategyForElement(editor);
 
   extensionStore.setState({ currentEditor: editor, editorFocused: true });
-
-  cleanupObserver =
-    activeStrategy?.observeEditorChanges(() => {
-      extensionStore.setState((s) => ({
-        overlayResetVersion: s.overlayResetVersion + 1,
-      }));
-    }) ?? null;
-
-  for (const listener of editorChangeListeners) listener();
 }
 
 export function setEditorFocused(focused: boolean): void {
@@ -657,7 +623,8 @@ export function tryAttachToActiveElement(): void {
   const active = document.activeElement;
   if (!active || active === document.body) return;
 
-  const siteSelector = strategy?.getEditorSelector();
+  const { siteConfig } = extensionStore.getState();
+  const siteSelector = siteConfig?.editorSelector;
   if (siteSelector) {
     const editor = active.matches(siteSelector)
       ? active
@@ -668,21 +635,14 @@ export function tryAttachToActiveElement(): void {
     }
   }
 
-  const generalSelector = generalStrategy?.getEditorSelector();
-  if (generalSelector) {
-    const editor = active.matches(generalSelector)
-      ? active
-      : active.closest(generalSelector);
-    if (editor) setCurrentEditor(editor);
-  }
+  const editor = active.matches(DEFAULT_GENERAL_SELECTOR)
+    ? active
+    : active.closest(DEFAULT_GENERAL_SELECTOR);
+  if (editor) setCurrentEditor(editor);
 }
 
 export function getEditorSelector(): string | null {
-  return strategy?.getEditorSelector() ?? null;
-}
-
-export function getGeneralInputSelector(): string | null {
-  return generalStrategy?.getEditorSelector() ?? null;
+  return extensionStore.getState().siteConfig?.editorSelector ?? null;
 }
 
 function applyAppearance(appearance: AiButtonAppearance | null): void {
@@ -752,23 +712,23 @@ chrome.storage.onChanged.addListener((changes, area) => {
     toolsEnabled: {},
     transformsEnabled: {},
     indicatorsEnabled: { page: true, bottomBorder: true },
-    aiMenuTools: {},
+    menuTools: {},
   };
   const current = extensionStore.getState().config;
   if (!current) return;
-  const updatedTools = current.aiMenu.tools.map((tool) => {
+  const updatedTools = current.widget.tools.map((tool) => {
     const override = prefs.toolsEnabled[tool.id];
     return override === undefined ? tool : { ...tool, enabled: override };
   });
-  const updatedTransforms = current.aiMenu.transforms.map((t) => {
+  const updatedTransforms = current.widget.transforms.map((t) => {
     const override = prefs.transformsEnabled[t.id];
     return override === undefined ? t : { ...t, enabled: override };
   });
   extensionStore.setState({
     config: {
       ...current,
-      aiMenu: {
-        ...current.aiMenu,
+      widget: {
+        ...current.widget,
         tools: updatedTools,
         transforms: updatedTransforms,
       },

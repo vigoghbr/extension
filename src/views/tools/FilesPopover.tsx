@@ -25,7 +25,7 @@ import {
 } from "@/stores/tools/filesStore";
 import type { FileItem } from "@/types";
 import { triggerAttach } from "@/utils/files-attach";
-import type { PopoverProps } from "@/views/tools/types";
+import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window } from "@/views/Window";
 
@@ -56,31 +56,31 @@ export function FilesPopover({
   const uploadStatus = useStore(filesStore, (s) => s.uploadStatus);
   const sendFileLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesSendLabel ?? "",
+    (s) => s.config?.widget.menu?.filesSendLabel ?? "",
   );
   const editLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesEditLabel ?? "",
+    (s) => s.config?.widget.menu?.filesEditLabel ?? "",
   );
   const aiEnableLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesAIEnableLabel ?? "",
+    (s) => s.config?.widget.menu?.filesAIEnableLabel ?? "",
   );
   const aiDisableLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesAIDisableLabel ?? "",
+    (s) => s.config?.widget.menu?.filesAIDisableLabel ?? "",
   );
   const deleteLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteLabel ?? "",
+    (s) => s.config?.widget.menu?.filesDeleteLabel ?? "",
   );
   const deleteConfirmLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesDeleteConfirmLabel ?? "",
+    (s) => s.config?.widget.menu?.filesDeleteConfirmLabel ?? "",
   );
   const attachHint = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.filesAttachHint ?? "",
+    (s) => s.config?.widget.menu?.filesAttachHint ?? "",
   );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.files);
   const [dragging, setDragging] = useState<string | null>(null);

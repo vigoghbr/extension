@@ -1,10 +1,10 @@
-import { emitSuccessToastr } from "@/libs/toast";
+import { toastr } from "@/libs/toastr";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
-import { applyTextToEditor } from "@/utils/apply-text";
+import { applyTextWithIdentify } from "@/utils/apply-text";
 
 export function applyQuickMessage(text: string): void {
   autocompleteStore.setState({ suppressUntilKeydown: true });
-  const applied = applyTextToEditor(text);
-  if (!applied) return;
-  emitSuccessToastr("QUICK_MESSAGE_APPLIED");
+  applyTextWithIdentify(text, "SELECT_APPLY_TARGET").then(() => {
+    toastr.success("QUICK_MESSAGE_APPLIED");
+  });
 }

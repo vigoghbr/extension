@@ -25,7 +25,7 @@ import {
 } from "@/stores/tools/notesStore";
 import type { Note } from "@/types";
 import { getNotePreview } from "@/utils/notes-html";
-import type { PopoverProps } from "@/views/tools/types";
+import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window, type WindowAction } from "@/views/Window";
 
@@ -42,27 +42,27 @@ export function NotesPopover({
   const messages = useStore(extensionStore, (s) => s.config?.messages);
   const pinHint = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.notesPinHint ?? "",
+    (s) => s.config?.widget.menu?.notesPinHint ?? "",
   );
   const aiEnableLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.notesAIEnableLabel ?? "",
+    (s) => s.config?.widget.menu?.notesAIEnableLabel ?? "",
   );
   const aiDisableLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.notesAIDisableLabel ?? "",
+    (s) => s.config?.widget.menu?.notesAIDisableLabel ?? "",
   );
   const emptyLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.notesEmpty ?? "",
+    (s) => s.config?.widget.menu?.notesEmpty ?? "",
   );
   const noteEmptyLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.noteEmptyLabel ?? "",
+    (s) => s.config?.widget.menu?.noteEmptyLabel ?? "",
   );
   const deleteLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "",
+    (s) => s.config?.widget.menu?.deleteTooltip ?? "",
   );
   const activePinBorderColor = useStore(
     stylesStore,

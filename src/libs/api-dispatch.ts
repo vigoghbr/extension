@@ -1,5 +1,6 @@
 import { logger } from "@/libs/logger";
-import { emitErrorToastr, emitSuccessToastr } from "@/libs/toast";
+import { getSessionHeaders } from "@/libs/session";
+import { toastr } from "@/libs/toastr";
 
 type Method = "get" | "post" | "put" | "patch" | "delete";
 
@@ -59,14 +60,14 @@ function showErrorToast(error: ApiError): void {
   if (isUnauthorizedError(error)) return;
   const code = extractApiErrorCode(error);
   if (!code) return;
-  emitErrorToastr(code);
+  toastr.error(code);
 }
 
 function showSuccessToast(body: unknown): void {
   if (typeof document === "undefined") return;
   const code = extractApiSuccessCode(body);
   if (!code) return;
-  emitSuccessToastr(code);
+  toastr.success(code);
 }
 
 function getLocal(): LocalRunner | null {
@@ -118,7 +119,13 @@ async function dispatch<T>(
   body?: unknown,
   config?: RequestConfig,
 ): Promise<ApiResponse<T>> {
-  const payload = { method, path, body, headers: config?.headers };
+  const sessionHeaders = await getSessionHeaders();
+  const payload = {
+    method,
+    path,
+    body,
+    headers: { ...sessionHeaders, ...config?.headers },
+  };
   const local = getLocal();
   const result = local ? await local(payload) : await sendViaRuntime(payload);
   if (!result.ok) {
@@ -127,7 +134,11 @@ async function dispatch<T>(
       if (result.status === 0) {
         logger.error("api:network-error", { method, path, error });
       } else {
-        logger.warn("api:response-error", { method, path, status: result.status });
+        logger.warn("api:response-error", {
+          method,
+          path,
+          status: result.status,
+        });
       }
     }
     showErrorToast(error);

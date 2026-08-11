@@ -4,6 +4,7 @@ import api, {
   isUnauthorizedError,
 } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
+import { getPageId } from "@/libs/page-id";
 import type { ChatCreateResponse, ChatSendResponse } from "@/types";
 
 async function handleChatCreate(): Promise<ChatCreateResponse> {
@@ -19,6 +20,7 @@ async function handleChatCreate(): Promise<ChatCreateResponse> {
 }
 
 async function handleChatSend(
+  pageId: string,
   chatId: string,
   message: string,
   pageScreenshot?: string,
@@ -28,7 +30,7 @@ async function handleChatSend(
   pageURL?: string,
 ): Promise<ChatSendResponse> {
   try {
-    const body: Record<string, unknown> = { message };
+    const body: Record<string, unknown> = { pageId, message };
     if (pageScreenshot) body.pageScreenshot = pageScreenshot;
     if (pageContent) body.pageContent = pageContent;
     if (pageMetadata) body.pageMetadata = pageMetadata;
@@ -53,7 +55,7 @@ async function handleChatSend(
 
 export const handleMessages: BackgroundMessageHandler = (
   message,
-  _sender,
+  sender,
   sendResponse,
 ) => {
   if (message.action === "chat_create") {
@@ -63,7 +65,9 @@ export const handleMessages: BackgroundMessageHandler = (
     return true;
   }
   if (message.action === "chat_send") {
+    const pageId = getPageId(sender.tab);
     handleChatSend(
+      pageId,
       message.chatId,
       message.message,
       message.pageScreenshot,

@@ -2,14 +2,7 @@ import { Bot, Plus } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "zustand";
 import { resolveIcon } from "@/libs/icons";
-import { emitSuccessToastr } from "@/libs/toast";
-import {
-  aiMenuStore,
-  closeChat,
-  closePopover,
-  setActiveInputItem,
-  setDirection,
-} from "@/stores/aiMenuStore";
+import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import { resetChat } from "@/stores/tools/chatStore";
@@ -20,35 +13,47 @@ import {
   requestAnswers,
   toolsStore,
 } from "@/stores/tools/toolsStore";
+import {
+  closeChat,
+  closePopover,
+  setActiveInputItem,
+  setDirection,
+  widgetStore,
+} from "@/stores/widgetStore";
 import type {
-  ResolvedAiMenuConfig,
   ResolvedAnswerToolConfig,
   ResolvedAnswerToolPageConfig,
   ResolvedTransformItemConfig,
+  ResolvedWidgetConfig,
   ThemeColorSet,
 } from "@/types";
 import { ChatPanel } from "@/views/tools/ChatPanel";
 import { Window } from "@/views/Window";
 
-interface AiPopoverProps {
+interface ToolsPopoverProps {
   colors: ThemeColorSet;
-  config: ResolvedAiMenuConfig;
+  config: ResolvedWidgetConfig;
   label: string;
   bottom: number;
   right: number;
   onClose: () => void;
 }
 
-export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
+export function ToolsPopover({
+  colors,
+  config,
+  bottom,
+  right,
+}: ToolsPopoverProps) {
   const extensionConfig = useStore(extensionStore, (s) => s.config);
   const windows = useStore(stylesStore, (s) => s.styles?.windows);
   const toolsStatus = useStore(toolsStore, (s) => s.status);
   const toolsErrorCode = useStore(toolsStore, (s) => s.errorCode);
   const toolsSuggestions = useStore(toolsStore, (s) => s.suggestions);
   const activeItemId = useStore(toolsStore, (s) => s.activeItemId);
-  const activeInputItem = useStore(aiMenuStore, (s) => s.activeInputItem);
-  const direction = useStore(aiMenuStore, (s) => s.direction);
-  const chatOpen = useStore(aiMenuStore, (s) => s.chatOpen);
+  const activeInputItem = useStore(widgetStore, (s) => s.activeInputItem);
+  const direction = useStore(widgetStore, (s) => s.direction);
+  const chatOpen = useStore(widgetStore, (s) => s.chatOpen);
 
   const toolItems = config.tools;
   const transformItems = config.transforms;
@@ -83,11 +88,11 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
   const hasContent = chatOpen || showToolResultsPanel || !!activeInputItem;
   if (!hasContent || !windows) return null;
 
-  const disclaimerText = config.vigoghMenu?.disclaimerText;
+  const disclaimerText = config.menu?.disclaimerText;
 
   if (chatOpen) {
     const chatLabel = config.tools.find((t) => t.id === "chats")?.label ?? "";
-    const newConversationLabel = config.vigoghMenu?.chatNewConversation ?? "";
+    const newConversationLabel = config.menu?.chatNewConversation ?? "";
     return (
       <Window
         colors={colors}
@@ -102,7 +107,7 @@ export function AiPopover({ colors, config, bottom, right }: AiPopoverProps) {
             tooltip: newConversationLabel,
             onClick: () => {
               resetChat();
-              emitSuccessToastr("CHAT_NEW_CONVERSATION_STARTED", {
+              toastr.success("CHAT_NEW_CONVERSATION_STARTED", {
                 id: "vigogh-chat-new",
               });
             },

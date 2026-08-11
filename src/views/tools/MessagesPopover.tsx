@@ -12,7 +12,7 @@ import {
 } from "@/stores/tools/quickMessagesStore";
 import type { QuickMessage, ThemeColorSet } from "@/types";
 import { applyQuickMessage } from "@/utils/quick-message-apply";
-import type { PopoverProps } from "@/views/tools/types";
+import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window, type WindowAction } from "@/views/Window";
 
@@ -35,15 +35,15 @@ export function MessagesPopover({
   const status = useStore(quickMessagesStore, (s) => s.status);
   const attachHint = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.messagesAttachHint ?? "",
+    (s) => s.config?.widget.menu?.messagesAttachHint ?? "",
   );
   const newTooltip = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.messagesNewTooltip ?? "",
+    (s) => s.config?.widget.menu?.messagesNewTooltip ?? "",
   );
   const emptyLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.messagesEmpty ?? "",
+    (s) => s.config?.widget.menu?.messagesEmpty ?? "",
   );
   const windowDims = useStore(stylesStore, (s) => s.styles?.windows.messages);
 
@@ -209,11 +209,11 @@ function MessageItem({
   const [hovered, setHovered] = useState(false);
   const editLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.editTooltip ?? "",
+    (s) => s.config?.widget.menu?.editTooltip ?? "",
   );
   const deleteLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.deleteTooltip ?? "",
+    (s) => s.config?.widget.menu?.deleteTooltip ?? "",
   );
 
   return (
@@ -311,23 +311,23 @@ function MessageForm({
   const saving = saveStatus === "loading";
   const maxLength = useStore(
     extensionStore,
-    (s) => s.config!.aiMenu.quickMessages.maxLength,
+    (s) => s.config!.widget.quickMessages.maxLength,
   );
   const placeholder = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.messagesPlaceholder ?? "",
+    (s) => s.config?.widget.menu?.messagesPlaceholder ?? "",
   );
   const cancelLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.cancelLabel ?? "",
+    (s) => s.config?.widget.menu?.cancelLabel ?? "",
   );
   const saveLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.saveLabel ?? "",
+    (s) => s.config?.widget.menu?.saveLabel ?? "",
   );
   const savingLabel = useStore(
     extensionStore,
-    (s) => s.config?.aiMenu.vigoghMenu?.savingLabel ?? "",
+    (s) => s.config?.widget.menu?.savingLabel ?? "",
   );
   const messagesPopoverStyles = useStore(
     stylesStore,

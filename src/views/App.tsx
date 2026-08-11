@@ -5,17 +5,17 @@ import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
 import cssText from "@/styles/index.compiled.css";
 import type { AiButtonAppearance } from "@/types";
+import Menu from "./Menu";
 import StickyNotesLayer from "./StickyNotesLayer";
 import Overlay from "./tools/Overlay";
 import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
-import VigoghMenu from "./VigoghMenu";
 
 const fontUrl = chrome.runtime.getURL("font.ttf");
 const fontCss = `@font-face{font-family:"Google Sans";src:url("${fontUrl}") format("truetype");font-weight:400;font-style:normal;font-display:swap;}*{font-family:"Google Sans",sans-serif;}`;
 
 export default function App() {
-  const aiMenuVisible = useStore(extensionStore, (s) => s.aiMenuVisible);
+  const widgetVisible = useStore(extensionStore, (s) => s.widgetVisible);
   const aiButtonEnabled = useStore(extensionStore, (s) => s.aiButtonEnabled);
   const overlayVisible = useStore(autocompleteStore, (s) => s.overlayVisible);
   const config = useStore(extensionStore, (s) => s.config);
@@ -61,7 +61,7 @@ export default function App() {
   return (
     <TooltipProvider portalContainer={tooltipContainer}>
       <style>{fontCss + cssText + sonnerCss + themeVarsCss}</style>
-      {aiMenuVisible && <VigoghMenu />}
+      {widgetVisible && <Menu />}
       {overlayVisible && <Overlay />}
       {colors && <StickyNotesLayer colors={colors} />}
       {colors && <Toaster position="top-right" colors={colors} />}

@@ -12,10 +12,3 @@ export function matchSite(
     ) ?? null
   );
 }
-
-export function hasSiteStrategy(
-  hostname: string,
-  sites: SiteConfig[],
-): boolean {
-  return matchSite(hostname, sites) !== null;
-}

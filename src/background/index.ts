@@ -10,16 +10,17 @@ import type {
 } from "@/types";
 import "@/libs/api-runner";
 import { maybeRefreshAuthToken } from "@/libs/auth";
+import { clearSession, hasValidSession, persistSession } from "@/libs/session";
 
 initLogger("background");
 
 import { toolHandlers } from "@/background/handlers";
-import { extractPageDataInPage } from "@/libs/html-page-extraction";
+import { extractPageScreenshot } from "@/libs/page-screenshot-extraction";
 import {
   openSidePanelForTab,
   openSidePanelFromActiveTab,
+  openValidateSessionScreen,
 } from "@/libs/sidepanel";
-import { captureActiveTab } from "@/utils/capture";
 
 let pageData: PageSessionData | null = null;
 
@@ -117,31 +118,34 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   } catch {}
 });
 
-async function capturePageData(tabId: number, windowId: number): Promise<void> {
+async function capturePageData(
+  tabId: number,
+  windowId: number,
+  silent: boolean,
+): Promise<void> {
   if (__DEV__) logger.debug("background:capture-page:start");
 
   const stored = await chrome.storage.local
     .get("vigogh-settings")
     .catch(() => ({}) as Record<string, unknown>);
   const settings = stored["vigogh-settings"] as
-    | { behavior?: { mainContentLimit?: number; maxLinks?: number } }
+    | { behavior?: { pageContentMaxSizeKB?: number; maxLinks?: number } }
     | undefined;
-  const mainContentLimit = settings?.behavior?.mainContentLimit ?? 12000;
+  const pageContentMaxBytes =
+    (settings?.behavior?.pageContentMaxSizeKB ?? 512) * 1024;
   const maxLinks = settings?.behavior?.maxLinks ?? 50;
 
-  const results = await chrome.scripting.executeScript({
-    target: { tabId },
-    func: extractPageDataInPage,
-    args: [mainContentLimit, maxLinks],
+  const contentData = await chrome.tabs.sendMessage(tabId, {
+    action: "extract_page_content",
+    maxLength: pageContentMaxBytes,
+    maxLinks,
   });
 
-  if (!results?.[0]?.result) {
+  if (!contentData) {
     throw new Error("No results from content script");
   }
 
-  const contentData = results[0].result;
-
-  const screenshot = await captureActiveTab(tabId, windowId);
+  const screenshot = await extractPageScreenshot(tabId, windowId, silent);
 
   pageData = {
     pageURL: contentData.pageURL || "",
@@ -153,7 +157,6 @@ async function capturePageData(tabId: number, windowId: number): Promise<void> {
 
   if (__DEV__) {
     logger.debug("background:capture-page:ready", {
-      pageContentLength: pageData.pageContent.length,
       pageMetadataLength: pageData.pageMetadata.length,
       pageFormsLength: pageData.pageForms.length,
       hasScreenshot: !!pageData.pageScreenshot,
@@ -209,14 +212,50 @@ chrome.action.onClicked.addListener((tab) => {
   void handleActionClick(tabId, windowId);
 });
 
+function openSidePanelForClick(
+  tabId: number,
+  windowId: number | undefined,
+): void {
+  chrome.sidePanel
+    .open(windowId !== undefined ? { tabId, windowId } : { tabId })
+    .then(() => {
+      logger.info("background:open-side-panel:ok", { tabId });
+    })
+    .catch((error: Error) => {
+      logger.error("background:open-side-panel", { error });
+    });
+}
+
 async function handleActionClick(
   tabId: number,
   windowId: number | undefined,
 ): Promise<void> {
   const stored = await chrome.storage.local
-    .get("vigogh-ai-button-enabled")
+    .get(["vigogh-ai-button-enabled", "vigogh-auth-token"])
     .catch(() => ({}) as Record<string, unknown>);
   const wasEnabled = stored["vigogh-ai-button-enabled"] !== false;
+  const isAuthenticated = Boolean(stored["vigogh-auth-token"]);
+
+  if (!isAuthenticated) {
+    if (!injectedTabs.has(tabId)) {
+      void handleFirstClick(tabId);
+    } else {
+      fetchAndCacheConfig().catch(() => {});
+    }
+    openSidePanelForClick(tabId, windowId);
+    return;
+  }
+
+  const hasSession = await hasValidSession();
+  if (!hasSession) {
+    if (!injectedTabs.has(tabId)) {
+      void handleFirstClick(tabId);
+    } else {
+      fetchAndCacheConfig().catch(() => {});
+    }
+    void openValidateSessionScreen();
+    return;
+  }
 
   if (!wasEnabled) {
     await chrome.storage.local
@@ -231,14 +270,7 @@ async function handleActionClick(
   }
 
   if (injectedTabs.has(tabId)) {
-    chrome.sidePanel
-      .open(windowId !== undefined ? { tabId, windowId } : { tabId })
-      .then(() => {
-        logger.info("background:open-side-panel:ok", { tabId });
-      })
-      .catch((error: Error) => {
-        logger.error("background:open-side-panel", { error });
-      });
+    openSidePanelForClick(tabId, windowId);
     fetchAndCacheConfig().catch(() => {});
     return;
   }
@@ -287,7 +319,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      capturePageData(tab.id, tab.windowId)
+      capturePageData(tab.id, tab.windowId, message.silent === true)
         .then(() => {
           sendResponse({ success: true, data: pageData });
           pageData = null;
@@ -309,14 +341,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "clear_auth_token") {
-    chrome.storage.local
-      .remove([
+    Promise.all([
+      chrome.storage.local.remove([
         "vigogh-auth-token",
         "vigogh-auth-refresh-token",
         "vigogh-auth-token-expires-at",
-      ])
+      ]),
+      clearSession(),
+    ])
       .then(() => {
         logger.info("auth:token-cleared");
+        sendResponse({ success: true });
+      })
+      .catch(() => sendResponse({ success: false }));
+    return true;
+  }
+
+  if (message.action === "set_session") {
+    persistSession(message)
+      .then(() => {
+        logger.info("session:set");
         sendResponse({ success: true });
       })
       .catch(() => sendResponse({ success: false }));
@@ -498,6 +542,16 @@ chrome.runtime.onMessageExternal.addListener(
     if (message.action === "set_auth_token") {
       persistAuthToken(message)
         .then(() => sendResponse({ success: true }))
+        .catch(() => sendResponse({ success: false }));
+      return true;
+    }
+
+    if (message.action === "set_session") {
+      persistSession(message)
+        .then(() => {
+          logger.info("session:set-external");
+          sendResponse({ success: true });
+        })
         .catch(() => sendResponse({ success: false }));
       return true;
     }

@@ -5,9 +5,11 @@ import api, {
 } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
 import { logger } from "@/libs/logger";
+import { getPageId } from "@/libs/page-id";
 import type { ToolResponse } from "@/types";
 
 async function handleTextTransformRequest(
+  pageId: string,
   text: string,
   action: string,
 ): Promise<ToolResponse> {
@@ -18,6 +20,7 @@ async function handleTextTransformRequest(
 
   try {
     const { data } = await api.post(getEndpoint("transforms"), {
+      pageId,
       text,
       action,
     });
@@ -56,7 +59,9 @@ async function handleSidepanelTextTransform(
     return { success: false, error: "no_selection" };
   }
 
+  const pageId = getPageId(tab);
   const transformResult = await handleTextTransformRequest(
+    pageId,
     selectedText.trim(),
     action,
   );
@@ -132,11 +137,12 @@ async function handleSidepanelTextTransform(
 
 export const handleMessages: BackgroundMessageHandler = (
   message,
-  _sender,
+  sender,
   sendResponse,
 ) => {
   if (message.action === "transforms_request") {
-    handleTextTransformRequest(message.text, message.transformAction)
+    const pageId = getPageId(sender.tab);
+    handleTextTransformRequest(pageId, message.text, message.transformAction)
       .then(sendResponse)
       .catch((error: Error) => {
         logger.error("transforms:request-failed", { error });
