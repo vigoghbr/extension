@@ -66,7 +66,7 @@ export async function extractPageScreenshot(
 ): Promise<string> {
   let quality = 75;
   let captureDelayMs = 150;
-  let maxSizeKB = 512;
+  let maxSizeKB = 256;
   try {
     const stored = await chrome.storage.local.get<{
       "vigogh-settings"?: ExtensionSettings;
@@ -74,7 +74,7 @@ export async function extractPageScreenshot(
     const cached = stored["vigogh-settings"];
     quality = cached?.behavior?.captureQuality ?? 75;
     captureDelayMs = cached?.behavior?.captureDelayMs ?? 150;
-    maxSizeKB = cached?.behavior?.pageScreenshotMaxSizeKB ?? 512;
+    maxSizeKB = cached?.behavior?.pageScreenshotMaxSizeKB ?? 256;
   } catch {}
 
   await chrome.tabs
