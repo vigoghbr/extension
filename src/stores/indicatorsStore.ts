@@ -1,36 +1,36 @@
+import type { StoreApi } from "zustand/vanilla";
 import {
-  extensionStore,
-  setPageIndicatorActive,
-} from "@/stores/extensionStore";
+  hideBottomBorder,
+  hideTopBorder,
+  showBottomBorder,
+  showTopBorder,
+} from "@/stores/borderStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
-import {
-  hideIndicator,
-  setBottomBorderLoading,
-  showIndicator,
-} from "@/utils/indicators";
+import { chatStore } from "@/stores/tools/chatStore";
+import { contextStore } from "@/stores/tools/contextStore";
+import { toolsStore } from "@/stores/tools/toolsStore";
 
 export { initIndicatorListener } from "@/utils/indicators";
 
-autocompleteStore.subscribe((state, prev) => {
-  if (state.status !== prev.status) {
-    const config = extensionStore.getState().config;
-    if (state.status === "loading" && config) {
-      showIndicator("bottom-border", config);
-      setBottomBorderLoading(true);
-    } else {
-      hideIndicator("bottom-border");
+function subscribeLoadingToBorder<T extends { status: string }>(
+  store: StoreApi<T>,
+  show: () => void,
+  hide: () => void,
+): void {
+  let active = false;
+  store.subscribe((state, prev) => {
+    if (state.status === prev.status) return;
+    if (state.status === "loading" && !active) {
+      active = true;
+      show();
+    } else if (state.status !== "loading" && active) {
+      active = false;
+      hide();
     }
-  }
-});
-
-export function showPageIndicator(): void {
-  const config = extensionStore.getState().config;
-  if (!config) return;
-  setPageIndicatorActive(true);
-  showIndicator("page", config);
+  });
 }
 
-export function hidePageIndicator(): void {
-  setPageIndicatorActive(false);
-  hideIndicator("page");
-}
+subscribeLoadingToBorder(autocompleteStore, showBottomBorder, hideBottomBorder);
+subscribeLoadingToBorder(toolsStore, showBottomBorder, hideBottomBorder);
+subscribeLoadingToBorder(chatStore, showBottomBorder, hideBottomBorder);
+subscribeLoadingToBorder(contextStore, showTopBorder, hideTopBorder);

@@ -2,11 +2,11 @@ import { Bot, Copy, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import cn from "@/libs/cn";
-import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import { chatStore, sendChatMessage } from "@/stores/tools/chatStore";
 import type { ThemeColorSet } from "@/types";
+import { applyTextWithIdentify } from "@/utils/apply-text";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 interface ChatPanelProps {
@@ -100,7 +100,7 @@ export function ChatPanel({ colors }: ChatPanelProps) {
       } catch (_) {}
       document.body.removeChild(ta);
     }
-    toastr.success("CHAT_COPIED");
+    applyTextWithIdentify(text, "COPIED_CLICK_TO_PASTE");
   };
 
   return (
@@ -121,7 +121,7 @@ export function ChatPanel({ colors }: ChatPanelProps) {
                   <button
                     key={example}
                     type="button"
-                    className="text-left text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors"
+                    className="text-left text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-default"
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.preventDefault();

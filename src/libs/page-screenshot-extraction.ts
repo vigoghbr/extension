@@ -18,17 +18,15 @@ async function blobToBase64DataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type};base64,${btoa(binary)}`;
 }
 
-async function fitScreenshotToSize(
+async function convertScreenshotToWebp(
   dataUrl: string,
   maxBytes: number,
 ): Promise<string> {
-  if (dataUrl.length <= maxBytes) return dataUrl;
-
   try {
     const sourceBlob = await (await fetch(dataUrl)).blob();
     const bitmap = await createImageBitmap(sourceBlob);
 
-    let quality = 0.6;
+    let quality = 0.8;
     let scale = 1;
     let best = dataUrl;
 
@@ -39,7 +37,7 @@ async function fitScreenshotToSize(
       const ctx = canvas.getContext("2d");
       ctx?.drawImage(bitmap, 0, 0, width, height);
       const outBlob = await canvas.convertToBlob({
-        type: "image/jpeg",
+        type: "image/webp",
         quality,
       });
       const outDataUrl = await blobToBase64DataUrl(outBlob);
@@ -56,7 +54,7 @@ async function fitScreenshotToSize(
 
     return best;
   } catch (error) {
-    logger.error("capture:resize-failed", { error });
+    logger.error("capture:webp-convert-failed", { error });
     return dataUrl;
   }
 }
@@ -100,7 +98,7 @@ export async function extractPageScreenshot(
       });
       return "";
     }
-    return await fitScreenshotToSize(screenshot, maxSizeKB * 1024);
+    return await convertScreenshotToWebp(screenshot, maxSizeKB * 1024);
   } catch (error) {
     logger.error("capture:capture-visible-tab-failed", {
       tabId,

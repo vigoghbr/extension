@@ -13,6 +13,7 @@ import {
 import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
+import type { PopoverProps } from "@/libs/popover";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import {
@@ -25,7 +26,6 @@ import {
 } from "@/stores/tools/filesStore";
 import type { FileItem } from "@/types";
 import { triggerAttach } from "@/utils/files-attach";
-import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window } from "@/views/Window";
 

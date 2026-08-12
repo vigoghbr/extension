@@ -25,7 +25,6 @@ import {
   autocompleteStore,
   clearSuppress,
   dismissCompletion,
-  restoreAutocompleteIfSessionValid,
   scheduleCompletion,
 } from "@/stores/tools/autocompleteStore";
 import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
@@ -33,7 +32,6 @@ import { widgetStore } from "@/stores/widgetStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { type AttachableFile, triggerAttach } from "@/utils/files-attach";
 import { DEFAULT_GENERAL_SELECTOR } from "@/utils/general-strategy";
-import { hideIndicator, showIndicator } from "@/utils/indicators";
 import { applyQuickMessage } from "@/utils/quick-message-apply";
 import App from "@/views/App";
 
@@ -55,16 +53,9 @@ if (!(window as any).__vigoghInit) {
       onCaughtError: (error) => logger.error("react:caught", { error }),
     }).render(<App />);
 
-    loadConfig(
-      () => {
-        requestAnimationFrame(() => {
-          void restoreAutocompleteIfSessionValid();
-        });
-      },
-      () => {
-        void promptLoginIfNeeded();
-      },
-    );
+    loadConfig(() => {
+      void promptLoginIfNeeded();
+    });
     void initAuthSessionCache();
     void initSessionCache();
     initIndicatorListener();
@@ -313,11 +304,10 @@ if (!(window as any).__vigoghInit) {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.action === "extract_page_content") {
         const maxBytes = msg.maxLength ?? 512 * 1024;
-        const maxLinks = msg.maxLinks ?? 50;
         sendResponse({
           pageURL: extractPageURL(),
           pageContent: extractPageContent(maxBytes),
-          pageMetadata: extractPageMetadata(maxLinks),
+          pageMetadata: extractPageMetadata(),
           pageForms: extractPageForms(),
         });
         return;
@@ -332,26 +322,15 @@ if (!(window as any).__vigoghInit) {
         host.style.visibility = "hidden";
         const bottom = document.getElementById("vigogh-bottom-indicator");
         if (bottom) bottom.style.visibility = "hidden";
-        if (!msg.silent) {
-          const config = extensionStore.getState().config;
-          if (config) {
-            showIndicator("page", config);
-            const pageEl = document.getElementById("vigogh-page-indicator");
-            if (pageEl) pageEl.style.visibility = "hidden";
-          }
-        }
+        const top = document.getElementById("vigogh-top-indicator");
+        if (top) top.style.visibility = "hidden";
       }
       if (msg.action === "restore_after_capture") {
         host.style.visibility = "";
         const bottom = document.getElementById("vigogh-bottom-indicator");
         if (bottom) bottom.style.visibility = "";
-        if (!msg.silent) {
-          const pageEl = document.getElementById("vigogh-page-indicator");
-          if (pageEl) {
-            pageEl.style.visibility = "";
-            setTimeout(() => hideIndicator("page"), 600);
-          }
-        }
+        const top = document.getElementById("vigogh-top-indicator");
+        if (top) top.style.visibility = "";
       }
     });
   }

@@ -3,14 +3,18 @@ export interface CapturePageMessage {
   silent?: boolean;
 }
 
-export interface AutocompleteRequestMessage {
-  action: "autocomplete_request";
-  text: string;
+export interface PrepareContextRequestMessage {
+  action: "prepare_context_request";
   pageURL?: string;
-  pageScreenshot?: string;
   pageContent?: string;
   pageMetadata?: string;
   pageForms?: string;
+  pageScreenshot?: string;
+}
+
+export interface AutocompleteRequestMessage {
+  action: "autocomplete_request";
+  text: string;
 }
 
 export interface AutocompleteAcceptMessage {
@@ -51,11 +55,6 @@ export interface TransformsRequestMessage {
 
 export interface AnswersRequestMessage {
   action: "answers_request";
-  pageURL: string;
-  pageContent: string;
-  pageMetadata: string;
-  pageForms: string;
-  pageScreenshot?: string;
   text?: string;
   apiPath?: string;
 }
@@ -82,7 +81,7 @@ export interface SetFeatureFlagsMessage {
 export interface UserToolPreferences {
   toolsEnabled: Record<string, boolean>;
   transformsEnabled: Record<string, boolean>;
-  indicatorsEnabled: { page: boolean; bottomBorder: boolean };
+  indicatorsEnabled: { topBorder: boolean; bottomBorder: boolean };
   menuTools: Record<string, boolean>;
 }
 
@@ -96,7 +95,7 @@ export interface SetAiButtonEnabledMessage {
   enabled: boolean;
 }
 
-export type IndicatorType = "page" | "bottom-border";
+export type IndicatorType = "top-border" | "bottom-border";
 
 export interface ThemeColorSet {
   buttonColor1: string;
@@ -177,6 +176,7 @@ export interface DebugLogBroadcastMessage {
 
 export type ExtensionMessage =
   | CapturePageMessage
+  | PrepareContextRequestMessage
   | AutocompleteRequestMessage
   | AutocompleteAcceptMessage
   | SetAuthTokenMessage
@@ -213,11 +213,6 @@ export interface ChatSendMessage {
   action: "chat_send";
   chatId: string;
   message: string;
-  pageScreenshot?: string;
-  pageContent?: string;
-  pageMetadata?: string;
-  pageForms?: string;
-  pageURL?: string;
 }
 
 export interface FilesFetchMessage {
@@ -336,6 +331,12 @@ export interface AutocompleteResponse {
   error?: string;
   errorCode?: string;
   reason?: "unauthenticated" | "api_error";
+}
+
+export interface ContextPrepareResponse {
+  accepted: boolean;
+  pageId: string;
+  expiresAt: string;
 }
 
 export interface IframeReadyMessage {
@@ -465,7 +466,8 @@ export interface ExtensionStylesWidget {
 }
 
 export interface ExtensionStylesIndicators {
-  pageBorderDuration: string;
+  topBorderHeight: string;
+  topBorderDuration: string;
   bottomBorderHeight: string;
   bottomBorderDuration: string;
   bottomBorderLoadingDuration: string;
@@ -995,7 +997,6 @@ export interface ExtensionSettings {
     dismissKey?: string;
     minSelectionLength?: number;
     captureDelayMs?: number;
-    pageIndicatorMaxDurationMs?: number;
     filesAttachDragSuppressMs?: number;
     filesAttachSuccessSuppressMs?: number;
     filesPasteHintDismissMs?: number;
@@ -1004,7 +1005,8 @@ export interface ExtensionSettings {
     windowDragMarginPx?: number;
     pageContentMaxSizeKB?: number;
     pageScreenshotMaxSizeKB?: number;
-    maxLinks?: number;
+    pageIndicatorMaxDurationMs?: number;
+    toastMaxDurationMs?: number;
   };
   overlay: {
     color: string;
@@ -1024,11 +1026,10 @@ export interface ExtensionSettings {
   widget?: WidgetConfig;
   endpoints?: Partial<Record<EndpointKey, string>>;
   indicators?: {
-    page?: {
-      border?: {
-        enabled?: boolean;
-        duration?: string;
-      };
+    topBorder?: {
+      enabled?: boolean;
+      duration?: string;
+      height?: string;
     };
     bottomBorder?: {
       enabled?: boolean;
@@ -1053,7 +1054,6 @@ export interface ResolvedBehaviorConfig {
   dismissKey?: string;
   minSelectionLength?: number;
   captureDelayMs?: number;
-  pageIndicatorMaxDurationMs?: number;
   filesAttachDragSuppressMs?: number;
   filesAttachSuccessSuppressMs?: number;
   filesPasteHintDismissMs?: number;
@@ -1062,7 +1062,8 @@ export interface ResolvedBehaviorConfig {
   windowDragMarginPx?: number;
   pageContentMaxSizeKB?: number;
   pageScreenshotMaxSizeKB?: number;
-  maxLinks?: number;
+  pageIndicatorMaxDurationMs?: number;
+  toastMaxDurationMs?: number;
 }
 
 export interface ResolvedOverlayConfig {
@@ -1082,6 +1083,7 @@ export interface ResolvedOverlayConfig {
 }
 
 export type EndpointKey =
+  | "context"
   | "autocomplete"
   | "autocompleteAccept"
   | "chats"
@@ -1237,10 +1239,9 @@ export interface ResolvedWidgetConfig {
   };
 }
 
-export interface ResolvedPageBorderConfig {
+export interface ResolvedTopBorderConfig {
   enabled?: boolean;
-  color1: string;
-  color2: string;
+  height: string;
   duration: string;
 }
 
@@ -1252,9 +1253,9 @@ export interface ResolvedBottomBorderConfig {
 }
 
 export interface ResolvedIndicatorsConfig {
-  page: {
-    border: ResolvedPageBorderConfig;
-  };
+  color1: string;
+  color2: string;
+  topBorder: ResolvedTopBorderConfig;
   bottomBorder: ResolvedBottomBorderConfig;
 }
 

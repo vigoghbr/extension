@@ -6,7 +6,6 @@ import {
   getActiveStrategy,
   resolveEditorWithStrategy,
 } from "@/stores/extensionStore";
-import { showPageIndicator } from "@/stores/indicatorsStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
 import type { ResolvedAnswerToolConfig, ToolResponse } from "@/types";
 import { applyTextWithIdentify } from "@/utils/apply-text";
@@ -71,96 +70,47 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
     directionOverride !== undefined
       ? directionOverride.trim() || undefined
       : editorText.trim() || undefined;
-  const pageURL = window.location.href;
 
   const toastId = toastr.loading("GENERATING_SUGGESTIONS");
-  const dispatchAnswers = (
-    pageScreenshot?: string,
-    pageContent = "",
-    pageMetadata = "",
-    pageForms = "",
-  ): void => {
-    sendBackgroundRequest<ToolResponse>(
-      {
-        action: "answers_request",
-        pageURL,
-        pageContent,
-        pageMetadata,
-        pageForms,
-        pageScreenshot,
-        text,
-        apiPath,
-      },
-      (response) => {
-        toastr.dismiss(toastId);
-        if (chrome.runtime.lastError) {
-          handleToolError();
-          return;
-        }
-        if (!response?.success || !response.suggestions?.length) {
-          const code = response?.errorCode;
-          if (code) {
-            toastr.error(code);
-            toolsStore.setState({
-              status: "error",
-              activeItemId: null,
-              errorCode: code,
-            });
-            if (code === "SUBSCRIPTION_REQUIRED") void openPlansScreen();
-            return;
-          }
-          handleToolError();
-          return;
-        }
-        toolsStore.setState({
-          status: "success",
-          suggestions: response.suggestions,
-          toolUsageId: response.toolUsageId ?? null,
-        });
-      },
-      { onNoToken: () => toastr.dismiss(toastId) },
-    );
-  };
 
-  showPageIndicator();
   toolsStore.setState({ status: "loading", activeItemId: itemId });
 
-  chrome.runtime.sendMessage(
-    { action: "capture_page" },
-    (
-      res:
-        | {
-            success?: boolean;
-            data?: {
-              pageScreenshot?: string;
-              pageContent?: string;
-              pageMetadata?: string;
-              pageForms?: string;
-            };
-          }
-        | undefined,
-    ) => {
-      if (chrome.runtime.lastError || !res?.success) {
-        toastr.dismiss(toastId);
+  sendBackgroundRequest<ToolResponse>(
+    { action: "answers_request", text, apiPath },
+    (response) => {
+      toastr.dismiss(toastId);
+      if (chrome.runtime.lastError) {
         handleToolError();
         return;
       }
-      dispatchAnswers(
-        res.data?.pageScreenshot,
-        res.data?.pageContent ?? "",
-        res.data?.pageMetadata ?? "",
-        res.data?.pageForms ?? "",
-      );
+      if (!response?.success || !response.suggestions?.length) {
+        const code = response?.errorCode;
+        if (code) {
+          toastr.error(code);
+          toolsStore.setState({
+            status: "error",
+            activeItemId: null,
+            errorCode: code,
+          });
+          if (code === "SUBSCRIPTION_REQUIRED") void openPlansScreen();
+          return;
+        }
+        handleToolError();
+        return;
+      }
+      toolsStore.setState({
+        status: "success",
+        suggestions: response.suggestions,
+        toolUsageId: response.toolUsageId ?? null,
+      });
     },
+    { onNoToken: () => toastr.dismiss(toastId) },
   );
 }
 
 export function acceptAnswer(text: string): void {
   navigator.clipboard.writeText(text);
-  autocompleteStore.setState({ suppressUntilKeydown: true });
-  applyTextWithIdentify(text, "SELECT_APPLY_TARGET").then(() => {
-    toastr.success("TEXT_PASTED");
-  });
+  applyTextWithIdentify(text, "COPIED_CLICK_TO_PASTE");
 }
 
 export function setSelectedRange(range: Range | null): void {

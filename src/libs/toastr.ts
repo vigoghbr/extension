@@ -4,10 +4,24 @@ import { extensionStore } from "@/stores/extensionStore";
 import type { ResolvedMessagesConfig } from "@/types";
 
 const baseOptions = { icon: null } as const;
+const DEFAULT_MAX_TOAST_DURATION_MS = 15000;
 
 interface ToastOptions {
   id?: string | number;
   duration?: number;
+}
+
+function getMaxToastDuration(): number {
+  const { config } = extensionStore.getState();
+  return config?.behavior.toastMaxDurationMs ?? DEFAULT_MAX_TOAST_DURATION_MS;
+}
+
+function clampOptions(options?: ToastOptions): ToastOptions | undefined {
+  if (!options || options.duration == null) return options;
+  return {
+    ...options,
+    duration: Math.min(options.duration, getMaxToastDuration()),
+  };
 }
 
 function isEmpty(message: unknown): boolean {
@@ -33,42 +47,45 @@ export const toast = {
       reportEmpty("show", message, options);
       return;
     }
-    sonnerToast(message, { ...baseOptions, ...options });
+    sonnerToast(message, { ...baseOptions, ...clampOptions(options) });
   },
   success(message: string, options?: ToastOptions): void {
     if (isEmpty(message)) {
       reportEmpty("success", message, options);
       return;
     }
-    sonnerToast.success(message, { ...baseOptions, ...options });
+    sonnerToast.success(message, { ...baseOptions, ...clampOptions(options) });
   },
   error(message: string, options?: ToastOptions): void {
     if (isEmpty(message)) {
       reportEmpty("error", message, options);
       return;
     }
-    sonnerToast.error(message, { ...baseOptions, ...options });
+    sonnerToast.error(message, { ...baseOptions, ...clampOptions(options) });
   },
   warning(message: string, options?: ToastOptions): void {
     if (isEmpty(message)) {
       reportEmpty("warning", message, options);
       return;
     }
-    sonnerToast.warning(message, { ...baseOptions, ...options });
+    sonnerToast.warning(message, { ...baseOptions, ...clampOptions(options) });
   },
   info(message: string, options?: ToastOptions): void {
     if (isEmpty(message)) {
       reportEmpty("info", message, options);
       return;
     }
-    sonnerToast.info(message, { ...baseOptions, ...options });
+    sonnerToast.info(message, { ...baseOptions, ...clampOptions(options) });
   },
   loading(message: string, options?: ToastOptions): string | number {
     if (isEmpty(message)) {
       reportEmpty("loading", message, options);
       return -1;
     }
-    return sonnerToast.loading(message, { ...baseOptions, ...options });
+    return sonnerToast.loading(message, {
+      ...baseOptions,
+      ...clampOptions(options),
+    });
   },
   dismiss(id: string | number): void {
     sonnerToast.dismiss(id);
@@ -144,7 +161,7 @@ export const toastr = {
     const { config } = extensionStore.getState();
     const message = resolveInfoMessage(code, config?.messages);
     if (!message) return;
-    toast.show(message, { id, duration: Number.POSITIVE_INFINITY });
+    toast.show(message, { id, duration: getMaxToastDuration() });
   },
   dismiss(id: string | number): void {
     toast.dismiss(id);

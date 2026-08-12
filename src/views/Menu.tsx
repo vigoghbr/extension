@@ -2,6 +2,7 @@ import { FolderOpen, NotebookPen, Settings, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { resolveIcon } from "@/libs/icons";
+import { popoverTools } from "@/libs/popover";
 import { openSidePanel, requireSession } from "@/libs/sidepanel";
 import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
@@ -9,6 +10,7 @@ import {
   autocompleteStore,
   toggleAutocomplete,
 } from "@/stores/tools/autocompleteStore";
+import { prepareToolContext } from "@/stores/tools/contextStore";
 import {
   applyTransform,
   requestAnswers,
@@ -30,7 +32,6 @@ import type {
 } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { resolveZIndex } from "@/utils/z-index";
-import { popoverTools } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 const QUICK_MESSAGES_TOOL_ID = "quick-messages";
@@ -106,8 +107,15 @@ export default function Menu() {
   if (!menu) return null;
 
   const handleItemClick = (action: () => void) => () => {
-    action();
     setMenuOpen(false);
+    void prepareToolContext().then(() => {
+      action();
+    });
+  };
+
+  const handleItemClickNoContext = (action: () => void) => () => {
+    setMenuOpen(false);
+    action();
   };
 
   const widgetConfig = config.widget;
@@ -394,7 +402,11 @@ export default function Menu() {
                     paddingV={pillPaddingV}
                     paddingH={pillPaddingH}
                     borderRadius={pillBorderRadius}
-                    onClick={handleItemClick(() => toggleAutocomplete())}
+                    onClick={
+                      autocompleteDisabled
+                        ? handleItemClick(() => toggleAutocomplete())
+                        : handleItemClickNoContext(() => toggleAutocomplete())
+                    }
                   />
                 );
               }
@@ -451,7 +463,7 @@ export default function Menu() {
             paddingV={pillPaddingV}
             paddingH={pillPaddingH}
             borderRadius={pillBorderRadius}
-            onClick={handleItemClick(() =>
+            onClick={handleItemClickNoContext(() =>
               requireSession(() => togglePopover("files")),
             )}
           />
@@ -468,7 +480,7 @@ export default function Menu() {
             paddingV={pillPaddingV}
             paddingH={pillPaddingH}
             borderRadius={pillBorderRadius}
-            onClick={handleItemClick(() =>
+            onClick={handleItemClickNoContext(() =>
               requireSession(() => togglePopover("notes")),
             )}
           />
@@ -486,7 +498,7 @@ export default function Menu() {
               paddingV={pillPaddingV}
               paddingH={pillPaddingH}
               borderRadius={pillBorderRadius}
-              onClick={handleItemClick(() =>
+              onClick={handleItemClickNoContext(() =>
                 requireSession(() => togglePopover("messages")),
               )}
             />
@@ -556,7 +568,7 @@ export default function Menu() {
             paddingH={pillPaddingH}
             borderRadius={pillBorderRadius}
             hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-            onClick={handleItemClick(() => {
+            onClick={handleItemClickNoContext(() => {
               if (!isExtensionContextValid()) return;
               void openSidePanel();
               closePopover();

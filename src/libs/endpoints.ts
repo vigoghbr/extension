@@ -1,6 +1,7 @@
 import type { EndpointKey, ExtensionSettings } from "@/types";
 
 const DEFAULT_ENDPOINTS: Record<EndpointKey, string> = {
+  context: "/v1/tools/contexts",
   autocomplete: "/v1/tools/autocompletes",
   autocompleteAccept: "/v1/tools/autocompletes/accept",
   chats: "/v1/tools/chats",

@@ -1,6 +1,7 @@
 import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
+import type { PopoverProps } from "@/libs/popover";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/stores/tools/quickMessagesStore";
 import type { QuickMessage, ThemeColorSet } from "@/types";
 import { applyQuickMessage } from "@/utils/quick-message-apply";
-import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window, type WindowAction } from "@/views/Window";
 

@@ -1,3 +1,4 @@
+import { ensureFreshContext } from "@/background/handlers/context-guard";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
 import api, {
   extractApiErrorCode,
@@ -10,6 +11,7 @@ import type { ToolResponse } from "@/types";
 
 async function handleTextTransformRequest(
   pageId: string,
+  tab: chrome.tabs.Tab | undefined,
   text: string,
   action: string,
 ): Promise<ToolResponse> {
@@ -19,6 +21,7 @@ async function handleTextTransformRequest(
   }
 
   try {
+    await ensureFreshContext(pageId, tab);
     const { data } = await api.post(getEndpoint("transforms"), {
       pageId,
       text,
@@ -62,6 +65,7 @@ async function handleSidepanelTextTransform(
   const pageId = getPageId(tab);
   const transformResult = await handleTextTransformRequest(
     pageId,
+    tab,
     selectedText.trim(),
     action,
   );
@@ -142,7 +146,12 @@ export const handleMessages: BackgroundMessageHandler = (
 ) => {
   if (message.action === "transforms_request") {
     const pageId = getPageId(sender.tab);
-    handleTextTransformRequest(pageId, message.text, message.transformAction)
+    handleTextTransformRequest(
+      pageId,
+      sender.tab,
+      message.text,
+      message.transformAction,
+    )
       .then(sendResponse)
       .catch((error: Error) => {
         logger.error("transforms:request-failed", { error });

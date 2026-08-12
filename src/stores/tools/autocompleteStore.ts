@@ -1,5 +1,4 @@
 import { createStore } from "zustand/vanilla";
-import { hasValidSession, initSessionCache } from "@/libs/auth";
 import type { IdentifyFieldHandle } from "@/libs/field-identifier";
 import { requireSession } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
@@ -8,6 +7,7 @@ import {
   resolveStrategyForElement,
   resolveTargetField,
 } from "@/stores/extensionStore";
+import { prepareToolContext } from "@/stores/tools/contextStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { requestLogin } from "@/utils/login-required";
 
@@ -37,53 +37,14 @@ export const autocompleteStore = createStore<AutocompleteState>()(() => ({
   error: null,
 }));
 
-interface CapturedPageContext {
-  pageURL: string;
-  pageScreenshot?: string;
-  pageContent?: string;
-  pageMetadata?: string;
-  pageForms?: string;
-}
-
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingIdentify: IdentifyFieldHandle | null = null;
-let capturedContext: CapturedPageContext | null = null;
-let contextSent = false;
 
 export function clearDebounce(): void {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
     debounceTimer = null;
   }
-}
-
-function captureContextOnce(): void {
-  chrome.runtime.sendMessage(
-    { action: "capture_page", silent: true },
-    (
-      res:
-        | {
-            success?: boolean;
-            data?: {
-              pageScreenshot?: string;
-              pageContent?: string;
-              pageMetadata?: string;
-              pageForms?: string;
-            };
-          }
-        | undefined,
-    ) => {
-      if (chrome.runtime.lastError || !res?.success) return;
-      capturedContext = {
-        pageURL: window.location.href,
-        pageScreenshot: res.data?.pageScreenshot,
-        pageContent: res.data?.pageContent,
-        pageMetadata: res.data?.pageMetadata,
-        pageForms: res.data?.pageForms,
-      };
-      contextSent = false;
-    },
-  );
 }
 
 function requestCompletionInternal(
@@ -110,57 +71,54 @@ function requestCompletionInternal(
     id: "autocomplete-loading",
   });
 
-  const payload: Record<string, unknown> = {
-    action: "autocomplete_request",
-    text,
-  };
-  if (!contextSent && capturedContext) {
-    Object.assign(payload, capturedContext);
-    contextSent = true;
-  }
-
-  chrome.runtime.sendMessage(payload, (response) => {
-    toastr.dismiss(toastId);
-    if (chrome.runtime.lastError) return;
-    const current = autocompleteStore.getState();
-    if (current.requestGeneration !== newGen) return;
-    if (current.suppressUntilKeydown) return;
-    if (!response?.success || !response.completion) {
-      if (response?.reason === "unauthenticated") {
-        disarmAutocomplete();
-        requestLogin();
+  chrome.runtime.sendMessage(
+    { action: "autocomplete_request", text },
+    (response) => {
+      toastr.dismiss(toastId);
+      if (chrome.runtime.lastError) return;
+      const current = autocompleteStore.getState();
+      if (current.requestGeneration !== newGen) return;
+      if (current.suppressUntilKeydown) return;
+      if (!response?.success || !response.completion) {
+        if (response?.reason === "unauthenticated") {
+          disarmAutocomplete();
+          requestLogin();
+          return;
+        }
+        if (response?.errorCode) {
+          toastr.error(response.errorCode);
+        } else if (response?.reason === "api_error") {
+          toastr.error(null, { id: "autocomplete-api-error" });
+        }
+        autocompleteStore.setState({ status: "idle" });
         return;
       }
-      if (response?.errorCode) {
-        toastr.error(response.errorCode);
-      } else if (response?.reason === "api_error") {
-        toastr.error(null, { id: "autocomplete-api-error" });
+      if (!isResponse) {
+        const currentText = strategy.getCurrentText(editor);
+        if (currentText !== text) {
+          autocompleteStore.setState({ status: "idle" });
+          return;
+        }
       }
-      autocompleteStore.setState({ status: "idle" });
-      return;
-    }
-    if (!isResponse) {
-      const currentText = strategy.getCurrentText(editor);
-      if (currentText !== text) return;
-    }
 
-    const caret = strategy.getCaretCoordinates(editor);
-    if (!caret) {
-      autocompleteStore.setState({ status: "idle" });
-      return;
-    }
+      const caret = strategy.getCaretCoordinates(editor);
+      if (!caret) {
+        autocompleteStore.setState({ status: "idle" });
+        return;
+      }
 
-    extensionStore.setState({ caretCoordinates: caret });
-    autocompleteStore.setState({
-      currentCompletion: response.completion,
-      currentSavedText: text,
-      currentCompletionId: response.toolUsageId ?? "",
-      overlayVisible: true,
-      status: "success",
-    });
+      extensionStore.setState({ caretCoordinates: caret });
+      autocompleteStore.setState({
+        currentCompletion: response.completion,
+        currentSavedText: text,
+        currentCompletionId: response.toolUsageId ?? "",
+        overlayVisible: true,
+        status: "success",
+      });
 
-    toastr.neutral("SUGGESTION_READY", { id: "autocomplete-ready" });
-  });
+      toastr.neutral("SUGGESTION_READY", { id: "autocomplete-ready" });
+    },
+  );
 }
 
 export function scheduleCompletion(): void {
@@ -256,19 +214,14 @@ export function armAutocomplete(): void {
       disabled: false,
       sessionAutocompleteEnabled: true,
     });
-    chrome.storage.local
-      .set({ "vigogh-autocomplete-enabled": true })
-      .catch(() => {});
     toastr.neutral("AUTOCOMPLETE_ENABLED");
-    captureContextOnce();
+    prepareToolContext();
   });
 }
 
 export function disarmAutocomplete(): void {
   cancelPendingIdentify();
   clearDebounce();
-  capturedContext = null;
-  contextSent = false;
   extensionStore.setState({
     disabled: true,
     caretCoordinates: null,
@@ -281,9 +234,6 @@ export function disarmAutocomplete(): void {
     currentCompletionId: "",
     requestGeneration: state.requestGeneration + 1,
   }));
-  chrome.storage.local
-    .set({ "vigogh-autocomplete-enabled": false })
-    .catch(() => {});
 }
 
 export function toggleAutocomplete(): void {
@@ -295,23 +245,3 @@ export function toggleAutocomplete(): void {
     toastr.neutral("AUTOCOMPLETE_DISABLED");
   }
 }
-
-let pendingSessionRestore = false;
-
-export async function restoreAutocompleteIfSessionValid(): Promise<void> {
-  await initSessionCache();
-  if (hasValidSession()) {
-    armAutocomplete();
-  } else {
-    pendingSessionRestore = true;
-  }
-}
-
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== "local") return;
-  if (!pendingSessionRestore) return;
-  if (!("vigogh-auth-token" in changes)) return;
-  if (!changes["vigogh-auth-token"].newValue) return;
-  pendingSessionRestore = false;
-  armAutocomplete();
-});

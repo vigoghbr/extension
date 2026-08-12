@@ -3,85 +3,67 @@ import { stylesStore } from "@/stores/stylesStore";
 import type { IndicatorType, ResolvedExtensionSettings } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
-let pageIndicatorAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
-
-function clearPageIndicatorAutoHide(): void {
-  if (pageIndicatorAutoHideTimer !== null) {
-    clearTimeout(pageIndicatorAutoHideTimer);
-    pageIndicatorAutoHideTimer = null;
-  }
-}
-
 export function showIndicator(
   type: IndicatorType,
   config: ResolvedExtensionSettings,
 ): void {
-  if (type === "page") {
-    showPageIndicator(config);
-    clearPageIndicatorAutoHide();
-    pageIndicatorAutoHideTimer = setTimeout(() => {
-      pageIndicatorAutoHideTimer = null;
-      hideIndicator("page");
-    }, config.behavior.pageIndicatorMaxDurationMs ?? 10000);
+  if (type === "top-border") {
+    showTopBorderIndicator(config);
   } else if (type === "bottom-border") {
     showBottomBorderIndicator(config);
   }
 }
 
 export function hideIndicator(type: IndicatorType): void {
-  if (type === "page") {
-    document.getElementById("vigogh-page-indicator")?.remove();
-    document.getElementById("vigogh-page-indicator-styles")?.remove();
+  if (type === "top-border") {
+    document.getElementById("vigogh-top-indicator")?.remove();
+    document.getElementById("vigogh-top-indicator-styles")?.remove();
   } else if (type === "bottom-border") {
     document.getElementById("vigogh-bottom-indicator")?.remove();
     document.getElementById("vigogh-bottom-indicator-styles")?.remove();
   }
 }
 
-function showPageIndicator(config: ResolvedExtensionSettings): void {
-  document.getElementById("vigogh-page-indicator")?.remove();
-  document.getElementById("vigogh-page-indicator-styles")?.remove();
+function showTopBorderIndicator(config: ResolvedExtensionSettings): void {
+  document.getElementById("vigogh-top-indicator")?.remove();
+  document.getElementById("vigogh-top-indicator-styles")?.remove();
 
-  const borderCfg = config.indicators.page.border;
-  if (!borderCfg.enabled) return;
+  const tbCfg = config.indicators.topBorder;
+  if (!tbCfg.enabled) return;
 
-  const c1 = borderCfg.color1;
-  const c2 = borderCfg.color2;
-  const duration = borderCfg.duration;
+  const c1 = config.indicators.color1;
+  const c2 = config.indicators.color2;
+  const duration = tbCfg.duration;
+  const height = tbCfg.height;
 
   const styleEl = document.createElement("style");
-  styleEl.id = "vigogh-page-indicator-styles";
+  styleEl.id = "vigogh-top-indicator-styles";
   styleEl.textContent = `
-    @property --vigogh-c {
+    @property --vigogh-tb-c {
       syntax: '<color>';
       initial-value: ${c1};
       inherits: false;
     }
-    @keyframes vigogh-border-move {
-      0%   { --vigogh-c: ${c1}; }
-      50%  { --vigogh-c: ${c2}; }
-      100% { --vigogh-c: ${c1}; }
+    @keyframes vigogh-tb-move {
+      0%   { --vigogh-tb-c: ${c1}; }
+      50%  { --vigogh-tb-c: ${c2}; }
+      100% { --vigogh-tb-c: ${c1}; }
     }
-    #vigogh-page-indicator {
+    #vigogh-top-indicator {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: ${height};
       pointer-events: none;
       z-index: ${stylesStore.getState().styles?.indicators.zIndex ?? 2147483644};
-      overflow: hidden;
-    }
-    #vigogh-page-indicator::before {
-      content: '';
-      position: absolute;
-      inset: 8px;
-      border-radius: 10px;
-      box-shadow: 0 0 0 100vmax var(--vigogh-c);
-      opacity: 0.55;
-      animation: vigogh-border-move ${duration} ease-in-out infinite;
+      background: var(--vigogh-tb-c);
+      animation: vigogh-tb-move ${duration} ease-in-out infinite;
     }
   `.trim();
 
   const divEl = document.createElement("div");
-  divEl.id = "vigogh-page-indicator";
+  divEl.id = "vigogh-top-indicator";
 
   document.head.appendChild(styleEl);
   document.body.appendChild(divEl);
@@ -94,9 +76,8 @@ function showBottomBorderIndicator(config: ResolvedExtensionSettings): void {
   const bbCfg = config.indicators.bottomBorder;
   if (!bbCfg.enabled) return;
 
-  const borderCfg = config.indicators.page.border;
-  const c1 = borderCfg.color1;
-  const c2 = borderCfg.color2;
+  const c1 = config.indicators.color1;
+  const c2 = config.indicators.color2;
   const duration = bbCfg.duration;
   const loadingDuration = bbCfg.loadingDuration;
   const height = bbCfg.height;

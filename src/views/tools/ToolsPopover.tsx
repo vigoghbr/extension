@@ -283,7 +283,7 @@ export function ToolsPopover({
             onChange={(e) => setDirection(e.target.value)}
           />
           <button
-            className="vigogh-shine-btn flex items-center justify-center gap-1.5 py-2 px-3.5 text-white text-sm font-medium rounded-md w-full cursor-pointer border-none"
+            className="vigogh-shine-btn flex items-center justify-center gap-1.5 py-2 px-3.5 text-white text-sm font-medium rounded-md w-full cursor-pointer border-none disabled:opacity-50"
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();

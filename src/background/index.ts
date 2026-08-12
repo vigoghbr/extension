@@ -1,21 +1,21 @@
+import { runApiRequest } from "@/libs/api-runner";
+import { maybeRefreshAuthToken } from "@/libs/auth";
 import {
   ALLOWED_EXTERNAL_MESSAGE_ORIGINS,
   STATIC_BASE_URL,
 } from "@/libs/constants";
 import { initLogger, logger } from "@/libs/logger";
+import { clearSession, hasValidSession, persistSession } from "@/libs/session";
 import type {
   ExtensionLocales,
   ExtensionMessage,
   PageSessionData,
 } from "@/types";
-import "@/libs/api-runner";
-import { maybeRefreshAuthToken } from "@/libs/auth";
-import { clearSession, hasValidSession, persistSession } from "@/libs/session";
 
 initLogger("background");
 
 import { toolHandlers } from "@/background/handlers";
-import { extractPageScreenshot } from "@/libs/page-screenshot-extraction";
+import { capturePageData } from "@/libs/page-capture";
 import {
   openSidePanelForTab,
   openSidePanelFromActiveTab,
@@ -117,52 +117,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await fetchAndCacheConfig();
   } catch {}
 });
-
-async function capturePageData(
-  tabId: number,
-  windowId: number,
-  silent: boolean,
-): Promise<void> {
-  if (__DEV__) logger.debug("background:capture-page:start");
-
-  const stored = await chrome.storage.local
-    .get("vigogh-settings")
-    .catch(() => ({}) as Record<string, unknown>);
-  const settings = stored["vigogh-settings"] as
-    | { behavior?: { pageContentMaxSizeKB?: number; maxLinks?: number } }
-    | undefined;
-  const pageContentMaxBytes =
-    (settings?.behavior?.pageContentMaxSizeKB ?? 512) * 1024;
-  const maxLinks = settings?.behavior?.maxLinks ?? 50;
-
-  const contentData = await chrome.tabs.sendMessage(tabId, {
-    action: "extract_page_content",
-    maxLength: pageContentMaxBytes,
-    maxLinks,
-  });
-
-  if (!contentData) {
-    throw new Error("No results from content script");
-  }
-
-  const screenshot = await extractPageScreenshot(tabId, windowId, silent);
-
-  pageData = {
-    pageURL: contentData.pageURL || "",
-    pageContent: contentData.pageContent || "",
-    pageMetadata: contentData.pageMetadata || "",
-    pageForms: contentData.pageForms || "",
-    pageScreenshot: screenshot,
-  };
-
-  if (__DEV__) {
-    logger.debug("background:capture-page:ready", {
-      pageMetadataLength: pageData.pageMetadata.length,
-      pageFormsLength: pageData.pageForms.length,
-      hasScreenshot: !!pageData.pageScreenshot,
-    });
-  }
-}
 
 async function ensureSettingsCached(): Promise<void> {
   const stored = await chrome.storage.local.get<{
@@ -306,6 +260,17 @@ async function handleFirstClick(tabId: number): Promise<void> {
   }
 }
 
+async function mintCustomToken(): Promise<string | null> {
+  const result = await runApiRequest({
+    method: "post",
+    path: "/v1/auth/exchange",
+  });
+  if (!result.ok) return null;
+  const customToken = (result.data as { data?: { token?: string } })?.data
+    ?.token;
+  return typeof customToken === "string" ? customToken : null;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
 
@@ -320,7 +285,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       capturePageData(tab.id, tab.windowId, message.silent === true)
-        .then(() => {
+        .then((data) => {
+          pageData = data;
           sendResponse({ success: true, data: pageData });
           pageData = null;
         })
@@ -378,13 +344,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             "vigogh-pending-custom-token",
             "vigogh-pending-custom-token-expires-at",
           ])
-          .then((stored) => {
-            const customToken = stored["vigogh-pending-custom-token"];
+          .then(async (stored) => {
+            const pendingToken = stored["vigogh-pending-custom-token"];
             const expiresAt = stored["vigogh-pending-custom-token-expires-at"];
-            const isValid =
-              !!customToken && !!expiresAt && Date.now() < expiresAt;
+            const isPendingValid =
+              !!pendingToken && !!expiresAt && Date.now() < expiresAt;
 
-            if (customToken) {
+            if (pendingToken) {
               chrome.storage.local
                 .remove([
                   "vigogh-pending-custom-token",
@@ -393,10 +359,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 .catch(() => {});
             }
 
+            if (isPendingValid) {
+              sendResponse({
+                success: true,
+                hasToken: !!token,
+                customToken: pendingToken,
+              });
+              return;
+            }
+
+            const mintedToken = token ? await mintCustomToken() : null;
+
             sendResponse({
               success: true,
               hasToken: !!token,
-              customToken: isValid ? customToken : undefined,
+              customToken: mintedToken ?? undefined,
             });
           })
           .catch(() => sendResponse({ success: true, hasToken: !!token }));
@@ -524,8 +501,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function isAllowedExternalOrigin(origin: string | undefined): boolean {
   if (!origin) return false;
-  if (ALLOWED_EXTERNAL_MESSAGE_ORIGINS.includes(origin)) return true;
-  return origin.startsWith("https://") && origin.endsWith(".vigogh.com");
+  return ALLOWED_EXTERNAL_MESSAGE_ORIGINS.includes(origin);
 }
 
 chrome.runtime.onMessageExternal.addListener(

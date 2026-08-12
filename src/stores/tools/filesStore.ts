@@ -2,6 +2,12 @@ import { createStore } from "zustand/vanilla";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
 import { toastr } from "@/libs/toastr";
+import {
+  hideBottomBorder,
+  hideTopBorder,
+  showBottomBorder,
+  showTopBorder,
+} from "@/stores/borderStore";
 import { extensionStore } from "@/stores/extensionStore";
 import type {
   FileItem,
@@ -42,9 +48,11 @@ function toastErrorCode(errorCode: string | undefined): boolean {
 export function fetchFiles(): void {
   if (!isExtensionContextValid()) return;
   filesStore.setState({ status: "loading", error: null });
+  showBottomBorder();
   sendBackgroundRequest<FilesFetchResponse>(
     { action: "files_fetch" },
     (response) => {
+      hideBottomBorder();
       if (!response?.success) {
         if (toastErrorCode(response?.errorCode)) {
           filesStore.setState({
@@ -62,6 +70,7 @@ export function fetchFiles(): void {
         error: null,
       });
     },
+    { onNoToken: hideBottomBorder },
   );
 }
 
@@ -77,9 +86,11 @@ export function uploadFile(file: File): void {
   const reader = new FileReader();
   reader.onload = () => {
     const base64 = (reader.result as string).split(",")[1];
+    showTopBorder();
     sendBackgroundRequest<FilesUploadResponse>(
       { action: "files_upload", name: file.name, mimeType: file.type, base64 },
       (response) => {
+        hideTopBorder();
         if (!response?.success) {
           dismissLoading();
           if (toastErrorCode(response?.errorCode)) {
@@ -111,6 +122,7 @@ export function uploadFile(file: File): void {
         };
         setTimeout(poll, pollIntervalMs);
       },
+      { onNoToken: hideTopBorder },
     );
   };
   reader.readAsDataURL(file);
@@ -123,9 +135,11 @@ export function renameFile(fileId: string, name: string): void {
   filesStore.setState((s) => ({
     items: s.items.map((i) => (i.id === fileId ? { ...i, name: trimmed } : i)),
   }));
+  showBottomBorder();
   sendBackgroundRequest<FilesRenameResponse>(
     { action: "files_rename", fileId, name: trimmed },
     (response) => {
+      hideBottomBorder();
       if (!response?.success) {
         if (!toastErrorCode(response?.errorCode)) handleToolError();
         fetchFiles();
@@ -139,6 +153,7 @@ export function renameFile(fileId: string, name: string): void {
       }
       toastr.success("FILE_RENAMED");
     },
+    { onNoToken: hideBottomBorder },
   );
 }
 
@@ -153,6 +168,7 @@ export function toggleFileAI(fileId: string): void {
       i.id === fileId ? { ...i, disabledForAI: nextDisabled } : i,
     ),
   });
+  showBottomBorder();
   api
     .patch<{ data: FileItem }>(getEndpoint("filesById", { fileId }), {
       disabledForAI: nextDisabled,
@@ -162,9 +178,11 @@ export function toggleFileAI(fileId: string): void {
       filesStore.setState((s) => ({
         items: s.items.map((i) => (i.id === fileId ? file : i)),
       }));
+      hideBottomBorder();
     })
     .catch(() => {
       filesStore.setState({ items: previous });
+      hideBottomBorder();
     });
 }
 
@@ -172,9 +190,11 @@ export function deleteFile(fileId: string): void {
   if (!isExtensionContextValid()) return;
   const previous = filesStore.getState().items;
   filesStore.setState({ items: previous.filter((i) => i.id !== fileId) });
+  showBottomBorder();
   sendBackgroundRequest<FilesDeleteResponse>(
     { action: "files_delete", fileId },
     (response) => {
+      hideBottomBorder();
       if (!response?.success) {
         if (!toastErrorCode(response?.errorCode)) handleToolError();
         filesStore.setState({ items: previous });
@@ -182,5 +202,6 @@ export function deleteFile(fileId: string): void {
       }
       toastr.success("FILE_DELETED");
     },
+    { onNoToken: hideBottomBorder },
   );
 }

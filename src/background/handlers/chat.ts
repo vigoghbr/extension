@@ -1,3 +1,4 @@
+import { ensureFreshContext } from "@/background/handlers/context-guard";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
 import api, {
   extractApiErrorCode,
@@ -21,25 +22,16 @@ async function handleChatCreate(): Promise<ChatCreateResponse> {
 
 async function handleChatSend(
   pageId: string,
+  tab: chrome.tabs.Tab | undefined,
   chatId: string,
   message: string,
-  pageScreenshot?: string,
-  pageContent?: string,
-  pageMetadata?: string,
-  pageForms?: string,
-  pageURL?: string,
 ): Promise<ChatSendResponse> {
   try {
-    const body: Record<string, unknown> = { pageId, message };
-    if (pageScreenshot) body.pageScreenshot = pageScreenshot;
-    if (pageContent) body.pageContent = pageContent;
-    if (pageMetadata) body.pageMetadata = pageMetadata;
-    if (pageForms) body.pageForms = pageForms;
-    if (pageURL) body.pageURL = pageURL;
-    const { data } = await api.post(
-      getEndpoint("chatMessages", { chatId }),
-      body,
-    );
+    await ensureFreshContext(pageId, tab);
+    const { data } = await api.post(getEndpoint("chatMessages", { chatId }), {
+      pageId,
+      message,
+    });
     return {
       success: true,
       response: data.data.response,
@@ -66,16 +58,7 @@ export const handleMessages: BackgroundMessageHandler = (
   }
   if (message.action === "chat_send") {
     const pageId = getPageId(sender.tab);
-    handleChatSend(
-      pageId,
-      message.chatId,
-      message.message,
-      message.pageScreenshot,
-      message.pageContent,
-      message.pageMetadata,
-      message.pageForms,
-      message.pageURL,
-    )
+    handleChatSend(pageId, sender.tab, message.chatId, message.message)
       .then(sendResponse)
       .catch(() => sendResponse({ success: false }));
     return true;

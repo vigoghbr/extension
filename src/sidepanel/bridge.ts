@@ -242,7 +242,7 @@ export function setupIframeBridge(
             ] ?? {
               toolsEnabled: {},
               transformsEnabled: {},
-              indicatorsEnabled: { page: true, bottomBorder: true },
+              indicatorsEnabled: { topBorder: true, bottomBorder: true },
               menuTools: {},
             };
             iframe.contentWindow!.postMessage(
@@ -422,7 +422,7 @@ export function setupIframeBridge(
             ] ?? {
               toolsEnabled: {},
               transformsEnabled: {},
-              indicatorsEnabled: { page: true, bottomBorder: true },
+              indicatorsEnabled: { topBorder: true, bottomBorder: true },
               menuTools: {},
             };
             iframe.contentWindow!.postMessage(

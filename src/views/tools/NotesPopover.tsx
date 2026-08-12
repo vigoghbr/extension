@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
+import type { PopoverProps } from "@/libs/popover";
 import { extensionStore } from "@/stores/extensionStore";
 import {
   hideStickyNote,
@@ -25,7 +26,6 @@ import {
 } from "@/stores/tools/notesStore";
 import type { Note } from "@/types";
 import { getNotePreview } from "@/utils/notes-html";
-import type { PopoverProps } from "@/libs/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 import { Window, type WindowAction } from "@/views/Window";
 

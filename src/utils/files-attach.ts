@@ -1,4 +1,5 @@
 import { toastr } from "@/libs/toastr";
+import { hideBottomBorder, showBottomBorder } from "@/stores/borderStore";
 import { extensionStore } from "@/stores/extensionStore";
 import type { FilesFetchBlobResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -58,7 +59,9 @@ export async function triggerAttach(item: AttachableFile): Promise<void> {
 
   const loadingId = toastr.loading("FILE_ATTACH_LOADING");
 
+  showBottomBorder();
   const blob = await fetchBlob(item);
+  hideBottomBorder();
   if (!blob) {
     toastr.dismiss(loadingId);
     toastr.error("FILE_ATTACH_FAILED");

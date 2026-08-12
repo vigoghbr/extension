@@ -1,5 +1,4 @@
 import { createStore } from "zustand/vanilla";
-import { hidePageIndicator } from "@/stores/indicatorsStore";
 import { toolsStore } from "@/stores/tools/toolsStore";
 import type { ResolvedAnswerToolConfig } from "@/types";
 import { onLoginRequired } from "@/utils/login-required";
@@ -34,8 +33,6 @@ export function openPopover(popover: ActivePopover): void {
 export function closePopover(popover?: ActivePopover): void {
   if (toolsStore.getState().status === "loading") return;
   if (!popover) {
-    const prev = widgetStore.getState().activeInputItem;
-    if (prev) hidePageIndicator();
     widgetStore.setState({
       activePopovers: [],
       activeInputItem: null,
@@ -44,10 +41,9 @@ export function closePopover(popover?: ActivePopover): void {
     });
     return;
   }
-  const { activePopovers, activeInputItem } = widgetStore.getState();
+  const { activePopovers } = widgetStore.getState();
   const next = activePopovers.filter((p) => p !== popover);
   if (popover === "ai") {
-    if (activeInputItem) hidePageIndicator();
     widgetStore.setState({
       activePopovers: next,
       activeInputItem: null,
@@ -60,7 +56,6 @@ export function closePopover(popover?: ActivePopover): void {
 }
 
 export function forceCloseWidget(): void {
-  if (widgetStore.getState().activeInputItem) hidePageIndicator();
   widgetStore.setState({
     activePopovers: [],
     activeInputItem: null,
@@ -100,12 +95,7 @@ export function closeChat(): void {
 export function setActiveInputItem(
   item: ResolvedAnswerToolConfig | null,
 ): void {
-  const prev = widgetStore.getState().activeInputItem;
   widgetStore.setState({ activeInputItem: item });
-
-  if (!item && prev) {
-    hidePageIndicator();
-  }
 }
 
 export function setDirection(text: string): void {
@@ -127,7 +117,6 @@ toolsStore.subscribe((state, prev) => {
     forceCloseWidget();
   }
   if (state.status === "success" && prev.status !== "success") {
-    hidePageIndicator();
     widgetStore.setState({ direction: "" });
     if (widgetStore.getState().activeInputItem) openPopover("ai");
   }

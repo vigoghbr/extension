@@ -48,7 +48,6 @@ interface ExtensionState {
   disabled: boolean;
   sessionAutocompleteEnabled: boolean;
   overlayResetVersion: number;
-  pageIndicatorActive: boolean;
   userToolsEnabled: Record<string, boolean>;
 }
 
@@ -64,13 +63,8 @@ export const extensionStore = createStore<ExtensionState>()(() => ({
   disabled: true,
   sessionAutocompleteEnabled: false,
   overlayResetVersion: 0,
-  pageIndicatorActive: false,
   userToolsEnabled: {},
 }));
-
-export function setPageIndicatorActive(active: boolean): void {
-  extensionStore.setState({ pageIndicatorActive: active });
-}
 
 let strategy: SiteStrategy | null = null;
 let generalStrategy: GeneralInputStrategy | null = null;
@@ -270,7 +264,7 @@ export function resolveConfig(
   styles: ExtensionStyles,
 ): ResolvedExtensionSettings {
   const rawWidget = raw.widget ?? {};
-  const rawBorder = raw.indicators?.page?.border ?? {};
+  const rawTopBorder = raw.indicators?.topBorder ?? {};
   const rawLoadingAnim = rawWidget.loadingAnimation ?? {};
   const rawFallback = raw.sitesFallback ?? {};
   const rawMessages = raw.messages ?? {};
@@ -318,7 +312,6 @@ export function resolveConfig(
       dismissKey: raw.behavior.dismissKey,
       minSelectionLength: raw.behavior.minSelectionLength,
       captureDelayMs: raw.behavior.captureDelayMs,
-      pageIndicatorMaxDurationMs: raw.behavior.pageIndicatorMaxDurationMs,
       filesAttachDragSuppressMs: raw.behavior.filesAttachDragSuppressMs,
       filesAttachSuccessSuppressMs: raw.behavior.filesAttachSuccessSuppressMs,
       filesPasteHintDismissMs: raw.behavior.filesPasteHintDismissMs,
@@ -327,7 +320,8 @@ export function resolveConfig(
       windowDragMarginPx: raw.behavior.windowDragMarginPx,
       pageContentMaxSizeKB: raw.behavior.pageContentMaxSizeKB,
       pageScreenshotMaxSizeKB: raw.behavior.pageScreenshotMaxSizeKB,
-      maxLinks: raw.behavior.maxLinks,
+      pageIndicatorMaxDurationMs: raw.behavior.pageIndicatorMaxDurationMs,
+      toastMaxDurationMs: raw.behavior.toastMaxDurationMs,
     },
     overlay: {
       color: raw.overlay.color,
@@ -446,13 +440,20 @@ export function resolveConfig(
         : undefined,
     },
     indicators: {
-      page: {
-        border: {
-          enabled: rawBorder.enabled,
-          color1: defaultThemeColors.buttonColor1,
-          color2: defaultThemeColors.buttonColor2,
-          duration: rawBorder.duration ?? styles.indicators.pageBorderDuration,
-        },
+      color1: defaultThemeColors.buttonColor1,
+      color2: defaultThemeColors.buttonColor2,
+      topBorder: {
+        enabled: rawTopBorder.enabled,
+        height:
+          rawTopBorder.height ??
+          styles.indicators.topBorderHeight ??
+          styles.indicators.bottomBorderHeight ??
+          "3px",
+        duration:
+          rawTopBorder.duration ??
+          styles.indicators.topBorderDuration ??
+          styles.indicators.bottomBorderDuration ??
+          "2.5s",
       },
       bottomBorder: (() => {
         const rawBB = raw.indicators?.bottomBorder ?? {};
@@ -473,10 +474,7 @@ export function resolveConfig(
   };
 }
 
-export function loadConfig(
-  onAutocompleteRestored?: () => void,
-  onLoaded?: () => void,
-): void {
+export function loadConfig(onLoaded?: () => void): void {
   chrome.storage.local
     .get<{
       "vigogh-settings"?: ExtensionSettings;
@@ -485,7 +483,6 @@ export function loadConfig(
       "vigogh-tool-preferences"?: UserToolPreferences;
       "vigogh-ai-button-appearance"?: AiButtonAppearance;
       "vigogh-ai-button-enabled"?: boolean;
-      "vigogh-autocomplete-enabled"?: boolean;
     }>([
       "vigogh-settings",
       "vigogh-locales",
@@ -493,7 +490,6 @@ export function loadConfig(
       "vigogh-tool-preferences",
       "vigogh-ai-button-appearance",
       "vigogh-ai-button-enabled",
-      "vigogh-autocomplete-enabled",
     ])
     .then((stored) => {
       const raw = stored["vigogh-settings"];
@@ -521,8 +517,8 @@ export function loadConfig(
       const base = config.theme.dark;
       const c1 = schemeColors?.buttonColor1 ?? base.buttonColor1;
       const c2 = schemeColors?.buttonColor2 ?? base.buttonColor2;
-      config.indicators.page.border.color1 = c1;
-      config.indicators.page.border.color2 = c2;
+      config.indicators.color1 = c1;
+      config.indicators.color2 = c2;
       config.overlay.color = schemeColors?.overlayColor ?? base.overlayColor;
       config.overlay.badgeBackground =
         schemeColors?.overlayBadgeBackground ?? base.overlayBadgeBackground;
@@ -537,11 +533,11 @@ export function loadConfig(
           const override = userPrefs.transformsEnabled[t.id];
           return override === undefined ? t : { ...t, enabled: override };
         });
-        config.indicators.page.border.enabled =
-          userPrefs.indicatorsEnabled.page &&
-          config.indicators.page.border.enabled;
+        config.indicators.topBorder.enabled =
+          (userPrefs.indicatorsEnabled.topBorder ?? true) &&
+          config.indicators.topBorder.enabled;
         config.indicators.bottomBorder.enabled =
-          userPrefs.indicatorsEnabled.bottomBorder &&
+          (userPrefs.indicatorsEnabled.bottomBorder ?? true) &&
           config.indicators.bottomBorder.enabled;
       }
 
@@ -570,18 +566,11 @@ export function loadConfig(
           extensionStore.setState({ siteConfig: matchedSite });
         }
 
-        const persistedAutocompleteEnabled =
-          stored["vigogh-autocomplete-enabled"] ?? false;
         const { sessionAutocompleteEnabled } = extensionStore.getState();
-        const needsRestore =
-          persistedAutocompleteEnabled && !sessionAutocompleteEnabled;
         extensionStore.setState({
           disabled: !sessionAutocompleteEnabled,
           sessionAutocompleteEnabled,
         });
-        if (needsRestore) {
-          onAutocompleteRestored?.();
-        }
         tryAttachToActiveElement();
       } else {
         extensionStore.setState({
@@ -646,7 +635,7 @@ export function getEditorSelector(): string | null {
 }
 
 function applyAppearance(appearance: AiButtonAppearance | null): void {
-  const { config, pageIndicatorActive } = extensionStore.getState();
+  const { config } = extensionStore.getState();
   if (!config) return;
 
   const schemeColors = appearance
@@ -660,10 +649,8 @@ function applyAppearance(appearance: AiButtonAppearance | null): void {
     ...config,
     indicators: {
       ...config.indicators,
-      page: {
-        ...config.indicators.page,
-        border: { ...config.indicators.page.border, color1: c1, color2: c2 },
-      },
+      color1: c1,
+      color2: c2,
     },
     overlay: {
       ...config.overlay,
@@ -674,8 +661,8 @@ function applyAppearance(appearance: AiButtonAppearance | null): void {
   };
   extensionStore.setState({ config: updatedConfig });
 
-  if (pageIndicatorActive) {
-    showIndicator("page", updatedConfig);
+  if (document.getElementById("vigogh-top-indicator")) {
+    showIndicator("top-border", updatedConfig);
   }
 
   if (document.getElementById("vigogh-bottom-indicator")) {
@@ -711,7 +698,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     | undefined) ?? {
     toolsEnabled: {},
     transformsEnabled: {},
-    indicatorsEnabled: { page: true, bottomBorder: true },
+    indicatorsEnabled: { topBorder: true, bottomBorder: true },
     menuTools: {},
   };
   const current = extensionStore.getState().config;
@@ -734,19 +721,16 @@ chrome.storage.onChanged.addListener((changes, area) => {
       },
       indicators: {
         ...current.indicators,
-        page: {
-          ...current.indicators.page,
-          border: {
-            ...current.indicators.page.border,
-            enabled:
-              prefs.indicatorsEnabled.page &&
-              current.indicators.page.border.enabled,
-          },
+        topBorder: {
+          ...current.indicators.topBorder,
+          enabled:
+            (prefs.indicatorsEnabled.topBorder ?? true) &&
+            current.indicators.topBorder.enabled,
         },
         bottomBorder: {
           ...current.indicators.bottomBorder,
           enabled:
-            prefs.indicatorsEnabled.bottomBorder &&
+            (prefs.indicatorsEnabled.bottomBorder ?? true) &&
             current.indicators.bottomBorder.enabled,
         },
       },

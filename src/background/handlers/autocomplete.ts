@@ -1,3 +1,4 @@
+import { ensureFreshContext } from "@/background/handlers/context-guard";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
@@ -6,12 +7,8 @@ import type { AutocompleteResponse } from "@/types";
 
 async function handleAutocompleteRequest(
   pageId: string,
+  tab: chrome.tabs.Tab | undefined,
   text: string,
-  pageURL?: string,
-  pageScreenshot?: string,
-  pageContent?: string,
-  pageMetadata?: string,
-  pageForms?: string,
 ): Promise<AutocompleteResponse> {
   const stored = await chrome.storage.local.get("vigogh-auth-token");
   if (!stored["vigogh-auth-token"]) {
@@ -23,14 +20,10 @@ async function handleAutocompleteRequest(
   }
 
   try {
+    await ensureFreshContext(pageId, tab);
     const { data } = await api.post(getEndpoint("autocomplete"), {
       pageId,
       text,
-      pageURL,
-      pageScreenshot,
-      pageContent,
-      pageMetadata,
-      pageForms,
     });
     return {
       success: true,
@@ -55,15 +48,7 @@ export const handleMessages: BackgroundMessageHandler = (
 ) => {
   if (message.action === "autocomplete_request") {
     const pageId = getPageId(sender.tab);
-    handleAutocompleteRequest(
-      pageId,
-      message.text,
-      message.pageURL,
-      message.pageScreenshot,
-      message.pageContent,
-      message.pageMetadata,
-      message.pageForms,
-    )
+    handleAutocompleteRequest(pageId, sender.tab, message.text)
       .then(sendResponse)
       .catch(() => sendResponse({ success: false }));
     return true;

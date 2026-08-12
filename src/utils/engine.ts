@@ -1,3 +1,4 @@
+import { getSelectionCaretCoordinates } from "@/libs/caret-coordinates";
 import {
   insertTextIntoContentEditable,
   insertTextIntoTextarea,
@@ -41,26 +42,7 @@ export class SiteEngine implements SiteStrategy {
       };
     }
 
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return null;
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    if (rect.width === 0 && rect.height === 0) {
-      const editorRect = editor.getBoundingClientRect();
-      return {
-        top: editorRect.top,
-        left: editorRect.left,
-        height: editorRect.height,
-      };
-    }
-
-    return {
-      top: rect.top,
-      left: rect.right,
-      height: rect.height,
-    };
+    return getSelectionCaretCoordinates(editor);
   }
 
   insertText(editor: HTMLElement, text: string): void {

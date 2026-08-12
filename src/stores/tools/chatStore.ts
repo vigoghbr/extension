@@ -17,11 +17,6 @@ interface ChatState {
   messages: ChatMessage[];
   status: "idle" | "loading" | "error";
   errorCode: string | null;
-  pageScreenshot: string | null;
-  pageContent: string | null;
-  pageMetadata: string | null;
-  pageForms: string | null;
-  pageURL: string | null;
 }
 
 export const chatStore = createStore<ChatState>()(() => ({
@@ -29,25 +24,7 @@ export const chatStore = createStore<ChatState>()(() => ({
   messages: [],
   status: "idle",
   errorCode: null,
-  pageScreenshot: null,
-  pageContent: null,
-  pageMetadata: null,
-  pageForms: null,
-  pageURL: null,
 }));
-
-export function setPageScreenshot(screenshot: string | null): void {
-  chatStore.setState({ pageScreenshot: screenshot });
-}
-
-export function setPageContext(
-  pageContent: string | null,
-  pageMetadata: string | null,
-  pageForms: string | null,
-  url: string | null,
-): void {
-  chatStore.setState({ pageContent, pageMetadata, pageForms, pageURL: url });
-}
 
 let nextId = 0;
 
@@ -55,7 +32,7 @@ export function sendChatMessage(text: string): void {
   if (!isExtensionContextValid()) return;
   const trimmed = text.trim();
   if (!trimmed) return;
-  const { status, messages, chatId } = chatStore.getState();
+  const { status, chatId } = chatStore.getState();
   if (status === "loading") return;
 
   const userMessage: ChatMessage = {
@@ -69,48 +46,10 @@ export function sendChatMessage(text: string): void {
     errorCode: null,
   }));
 
-  const isFirstMessage = messages.length === 0;
-  const proceed = () => {
-    if (!chatId) {
-      createAndSend(trimmed);
-    } else {
-      doSend(chatId, trimmed);
-    }
-  };
-
-  if (isFirstMessage) {
-    chrome.runtime.sendMessage(
-      { action: "capture_page" },
-      (res: {
-        success: boolean;
-        data?: {
-          pageScreenshot?: string;
-          pageContent?: string;
-          pageMetadata?: string;
-          pageForms?: string;
-        };
-      }) => {
-        if (chrome.runtime.lastError || !res?.success) {
-          handleToolError();
-          chatStore.setState((s) => ({
-            messages: s.messages.filter((m) => m.id !== userMessage.id),
-            status: "idle",
-          }));
-          return;
-        }
-        setPageContext(
-          res.data?.pageContent ?? "",
-          res.data?.pageMetadata ?? "",
-          res.data?.pageForms ?? "",
-          window.location.href,
-        );
-        if (res.data?.pageScreenshot)
-          setPageScreenshot(res.data.pageScreenshot);
-        proceed();
-      },
-    );
+  if (!chatId) {
+    createAndSend(trimmed);
   } else {
-    proceed();
+    doSend(chatId, trimmed);
   }
 }
 
@@ -136,21 +75,8 @@ function createAndSend(trimmed: string): void {
 }
 
 function doSend(chatId: string, message: string): void {
-  const { pageScreenshot, pageContent, pageMetadata, pageForms, pageURL } =
-    chatStore.getState();
-  setPageScreenshot(null);
-  setPageContext(null, null, null, null);
   sendBackgroundRequest<ChatSendResponse>(
-    {
-      action: "chat_send",
-      chatId,
-      message,
-      pageScreenshot: pageScreenshot ?? undefined,
-      pageContent: pageContent ?? undefined,
-      pageMetadata: pageMetadata ?? undefined,
-      pageForms: pageForms ?? undefined,
-      pageURL: pageURL ?? undefined,
-    },
+    { action: "chat_send", chatId, message },
     (sendRes) => {
       if (chrome.runtime.lastError || !sendRes?.success) {
         const code = sendRes?.errorCode;
@@ -181,11 +107,6 @@ export function resetChat(): void {
     messages: [],
     status: "idle",
     errorCode: null,
-    pageScreenshot: null,
-    pageContent: null,
-    pageMetadata: null,
-    pageForms: null,
-    pageURL: null,
   });
 }
 
