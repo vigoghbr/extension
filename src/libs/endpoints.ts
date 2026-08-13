@@ -7,7 +7,7 @@ const DEFAULT_ENDPOINTS: Record<EndpointKey, string> = {
   chats: "/v1/tools/chats",
   chatMessages: "/v1/tools/chats/:chatId/messages",
   files: "/v1/tools/files",
-  filesById: "/v1/tools/files/:fileId",
+  filesById: "/v1/tools/files/:id",
   transforms: "/v1/tools/transforms",
   answers: "/v1/tools/answers",
   notes: "/v1/tools/notes",

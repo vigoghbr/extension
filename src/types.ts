@@ -241,7 +241,6 @@ export interface FilesDeleteMessage {
 export interface FilesFetchBlobMessage {
   action: "files_fetch_blob";
   fileId: string;
-  downloadUrl: string;
 }
 
 export interface FilesFetchBlobResponse {
@@ -254,7 +253,7 @@ export interface FilesFetchBlobResponse {
 
 export interface FilesDownloadMessage {
   action: "files_download";
-  downloadUrl: string;
+  fileId: string;
 }
 
 export interface FilesDownloadResponse {
@@ -290,7 +289,6 @@ export interface FileItem {
   disabledForAI?: boolean;
   createdAt: string;
   updatedAt: string;
-  downloadUrl: string;
 }
 
 export interface FilesFetchResponse {

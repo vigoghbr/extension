@@ -319,7 +319,6 @@ function FileRow({
             id: item.id,
             originalFilename: item.originalFilename,
             mimeType: item.mimeType,
-            downloadUrl: item.downloadUrl,
           }),
         );
         e.dataTransfer.effectAllowed = "copy";

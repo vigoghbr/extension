@@ -73,7 +73,7 @@ export const handleMessages: BackgroundMessageHandler = (
   }
   if (message.action === "files_rename") {
     api
-      .patch(getEndpoint("filesById", { fileId: message.fileId }), {
+      .patch(getEndpoint("filesById", { id: message.fileId }), {
         name: message.name,
       })
       .then(({ data }) => sendResponse({ success: true, file: data.data }))
@@ -83,7 +83,15 @@ export const handleMessages: BackgroundMessageHandler = (
   if (message.action === "files_fetch_blob") {
     (async () => {
       try {
-        const fileResponse = await fetch(message.downloadUrl);
+        const { data } = await api.get(
+          getEndpoint("filesById", { id: message.fileId }),
+        );
+        const downloadUrl = data.data?.downloadUrl as string | undefined;
+        if (!downloadUrl) {
+          sendResponse({ success: false, error: "Missing download URL" });
+          return;
+        }
+        const fileResponse = await fetch(downloadUrl);
         if (!fileResponse.ok) {
           sendResponse({ success: false, error: "Storage download failed" });
           return;
@@ -98,21 +106,36 @@ export const handleMessages: BackgroundMessageHandler = (
     return true;
   }
   if (message.action === "files_download") {
-    chrome.tabs.create({ url: message.downloadUrl }, (tab) => {
-      if (chrome.runtime.lastError || !tab) {
-        sendResponse({
-          success: false,
-          error: chrome.runtime.lastError?.message ?? "Failed to open tab",
+    (async () => {
+      try {
+        const { data } = await api.get(
+          getEndpoint("filesById", { id: message.fileId }),
+        );
+        const downloadUrl = data.data?.downloadUrl as string | undefined;
+        if (!downloadUrl) {
+          sendResponse({ success: false, error: "Missing download URL" });
+          return;
+        }
+        chrome.tabs.create({ url: downloadUrl }, (tab) => {
+          if (chrome.runtime.lastError || !tab) {
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError?.message ?? "Failed to open tab",
+            });
+            return;
+          }
+          sendResponse({ success: true });
         });
-        return;
+      } catch (error) {
+        logger.error("files:download-error", { error });
+        respondFromApiError(error, sendResponse);
       }
-      sendResponse({ success: true });
-    });
+    })();
     return true;
   }
   if (message.action === "files_delete") {
     api
-      .delete(getEndpoint("filesById", { fileId: message.fileId }))
+      .delete(getEndpoint("filesById", { id: message.fileId }))
       .then(() => sendResponse({ success: true }))
       .catch((error) => respondFromApiError(error, sendResponse));
     return true;

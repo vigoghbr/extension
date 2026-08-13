@@ -6,14 +6,45 @@ const turndownService = new TurndownService({
   codeBlockStyle: "fenced",
 });
 
+const HIDDEN_MARK_ATTRIBUTE = "data-vigogh-hidden";
 const IMAGE_ELEMENT_SELECTOR = "img, picture, source, svg";
+const MAIN_CONTENT_SELECTOR = "main, [role='main']";
+const BOILERPLATE_SELECTOR =
+  "nav, header, footer, [role='navigation'], [role='banner'], [role='contentinfo']";
+const NON_CONTENT_ELEMENT_SELECTOR = `script, style, noscript, template, iframe, ${BOILERPLATE_SELECTOR}, [${HIDDEN_MARK_ATTRIBUTE}]`;
 const DATA_IMAGE_ATTRIBUTES = ["href", "src", "srcset", "poster", "data-src"];
 const MIN_ARTICLE_CONTENT_RATIO = 0.5;
 
-function stripImages(html: string): string {
+function isElementHidden(el: Element): boolean {
+  if (typeof el.checkVisibility === "function") {
+    return !el.checkVisibility({
+      checkOpacity: true,
+      checkVisibilityCSS: true,
+    });
+  }
+  const style = getComputedStyle(el);
+  return style.display === "none" || style.visibility === "hidden";
+}
+
+function markHiddenElements(root: Element): Element[] {
+  const hidden = [...root.querySelectorAll("*")].filter(isElementHidden);
+  for (const el of hidden) el.setAttribute(HIDDEN_MARK_ATTRIBUTE, "");
+  return hidden;
+}
+
+function unmarkHiddenElements(elements: Element[]): void {
+  for (const el of elements) el.removeAttribute(HIDDEN_MARK_ATTRIBUTE);
+}
+
+function sanitizeHtml(html: string): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
 
+  for (const el of doc.querySelectorAll(NON_CONTENT_ELEMENT_SELECTOR))
+    el.remove();
   for (const el of doc.querySelectorAll(IMAGE_ELEMENT_SELECTOR)) el.remove();
+  for (const el of doc.querySelectorAll("a")) {
+    if (!el.textContent?.trim()) el.remove();
+  }
 
   for (const el of doc.querySelectorAll("*")) {
     for (const attr of DATA_IMAGE_ATTRIBUTES) {
@@ -52,11 +83,22 @@ function extractArticleHtml(): string | null {
   return article.content;
 }
 
-export function extractPageContent(maxBytes: number): string {
-  const html = stripImages(
-    extractArticleHtml() ?? document.body?.innerHTML ?? "",
-  );
-  const markdown = turndownService.turndown(html);
+function extractFallbackHtml(): string {
+  const main = document.querySelector<HTMLElement>(MAIN_CONTENT_SELECTOR);
+  return (main ?? document.body)?.innerHTML ?? "";
+}
 
-  return truncateToByteSize(normalize(markdown), maxBytes);
+export function extractPageContent(maxBytes: number): string {
+  const hiddenElements = markHiddenElements(
+    document.body ?? document.documentElement,
+  );
+
+  try {
+    const html = sanitizeHtml(extractArticleHtml() ?? extractFallbackHtml());
+    const markdown = turndownService.turndown(html);
+
+    return truncateToByteSize(normalize(markdown), maxBytes);
+  } finally {
+    unmarkHiddenElements(hiddenElements);
+  }
 }

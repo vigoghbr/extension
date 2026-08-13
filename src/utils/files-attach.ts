@@ -10,7 +10,6 @@ export interface AttachableFile {
   id: string;
   originalFilename: string;
   mimeType: string;
-  downloadUrl: string;
 }
 
 let attachSuppressUntil = 0;
@@ -34,7 +33,7 @@ function openDownloadTab(item: AttachableFile): Promise<boolean> {
       return;
     }
     sendBackgroundRequest<FilesDownloadResponse>(
-      { action: "files_download", downloadUrl: item.downloadUrl },
+      { action: "files_download", fileId: item.id },
       (response) => resolve(!!response?.success),
     );
   });
@@ -47,11 +46,7 @@ function fetchBlob(item: AttachableFile): Promise<Blob | null> {
       return;
     }
     sendBackgroundRequest<FilesFetchBlobResponse>(
-      {
-        action: "files_fetch_blob",
-        fileId: item.id,
-        downloadUrl: item.downloadUrl,
-      },
+      { action: "files_fetch_blob", fileId: item.id },
       (response) => {
         if (!response?.success || !response.base64) {
           resolve(null);

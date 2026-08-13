@@ -23,7 +23,6 @@ const SENTRY_TUNNEL = "https://api.vigogh.com/v1/sentry";
 
 const RUNTIME_ACTION = {
   info: "logger_info",
-  debug: "logger_debug",
   warn: "logger_warn",
   error: "logger_error",
 } as const;
@@ -181,11 +180,6 @@ export const logger = {
   debug(prefix: string, data?: LogData): void {
     if (__DEV__) console.log(prefix, data ?? {});
     broadcastDebugLog("debug", prefix, data);
-    if (scope) {
-      captureLogLocal("debug", prefix, prefix, data);
-      return;
-    }
-    sendToRuntime(RUNTIME_ACTION.debug, { prefix, data: data ?? {} });
   },
   warn(prefix: string, data?: LogData): void {
     if (__DEV__) console.warn(prefix, data ?? {});
@@ -252,9 +246,6 @@ function installRuntimeListener(): void {
     switch (action) {
       case RUNTIME_ACTION.info:
         captureLogLocal("info", payload.prefix, payload.prefix, payload.data);
-        return false;
-      case RUNTIME_ACTION.debug:
-        captureLogLocal("debug", payload.prefix, payload.prefix, payload.data);
         return false;
       case RUNTIME_ACTION.warn:
         captureLogLocal("warn", payload.prefix, payload.prefix, payload.extra);

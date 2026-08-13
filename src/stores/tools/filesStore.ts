@@ -170,7 +170,7 @@ export function toggleFileAI(fileId: string): void {
   });
   showBottomBorder();
   api
-    .patch<{ data: FileItem }>(getEndpoint("filesById", { fileId }), {
+    .patch<{ data: FileItem }>(getEndpoint("filesById", { id: fileId }), {
       disabledForAI: nextDisabled,
     })
     .then((res) => {

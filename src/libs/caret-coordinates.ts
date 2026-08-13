@@ -40,5 +40,9 @@ export function getSelectionCaretCoordinates(
     }
   }
 
-  return { top: rect.top, left: rect.left, height: rect.height };
+  return {
+    top: rect.top,
+    left: rect.left,
+    height: rect.height,
+  };
 }

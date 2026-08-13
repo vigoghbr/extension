@@ -304,12 +304,25 @@ if (!(window as any).__vigoghInit) {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.action === "extract_page_content") {
         const maxBytes = msg.maxLength ?? 512 * 1024;
-        sendResponse({
-          pageURL: extractPageURL(),
-          pageContent: extractPageContent(maxBytes),
-          pageMetadata: extractPageMetadata(),
-          pageForms: extractPageForms(),
-        });
+        const pageURL = extractPageURL();
+        const pageContent = extractPageContent(maxBytes);
+        const pageMetadata = extractPageMetadata();
+        const pageForms = extractPageForms();
+
+        if (__DEV__) {
+          logger.debug("content:extract-page-content:pageURL", { pageURL });
+          logger.debug("content:extract-page-content:pageContent", {
+            pageContent,
+          });
+          logger.debug("content:extract-page-content:pageMetadata", {
+            pageMetadata,
+          });
+          logger.debug("content:extract-page-content:pageForms", {
+            pageForms,
+          });
+        }
+
+        sendResponse({ pageURL, pageContent, pageMetadata, pageForms });
         return;
       }
       if (msg.action === "serious_error_toast") {

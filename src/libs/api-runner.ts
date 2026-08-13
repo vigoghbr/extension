@@ -120,7 +120,9 @@ export async function runApiRequest(
   payload: ApiRequestPayload,
 ): Promise<ApiRunResult> {
   const { method, path, body, headers } = payload;
-  logger.debug("api:request", { method, path });
+  const url = `${API_BASE_URL}${path}`;
+  logger.debug("api:request", { method, url });
+  const startedAt = performance.now();
   try {
     const response = await axiosApi.request({
       method,
@@ -130,8 +132,9 @@ export async function runApiRequest(
     });
     logger.debug("api:response", {
       method,
-      path,
+      url,
       status: response.status,
+      durationMs: Math.round(performance.now() - startedAt),
     });
     return { ok: true, status: response.status, data: response.data };
   } catch (err) {
