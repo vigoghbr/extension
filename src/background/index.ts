@@ -185,9 +185,8 @@ async function handleActionClick(
   windowId: number | undefined,
 ): Promise<void> {
   const stored = await chrome.storage.local
-    .get(["vigogh-ai-button-enabled", "vigogh-auth-token"])
+    .get(["vigogh-auth-token"])
     .catch(() => ({}) as Record<string, unknown>);
-  const wasEnabled = stored["vigogh-ai-button-enabled"] !== false;
   const isAuthenticated = Boolean(stored["vigogh-auth-token"]);
 
   if (!isAuthenticated) {
@@ -211,25 +210,14 @@ async function handleActionClick(
     return;
   }
 
-  if (!wasEnabled) {
-    await chrome.storage.local
-      .set({ "vigogh-ai-button-enabled": true })
-      .catch(() => {});
-    if (!injectedTabs.has(tabId)) {
-      void handleFirstClick(tabId);
-    } else {
-      fetchAndCacheConfig().catch(() => {});
-    }
-    return;
-  }
-
-  if (injectedTabs.has(tabId)) {
-    openSidePanelForClick(tabId, windowId);
+  if (!injectedTabs.has(tabId)) {
+    void handleFirstClick(tabId);
+  } else {
     fetchAndCacheConfig().catch(() => {});
-    return;
+    chrome.tabs
+      .sendMessage(tabId, { action: "activate_widget" })
+      .catch(() => {});
   }
-
-  void handleFirstClick(tabId);
 }
 
 async function handleFirstClick(tabId: number): Promise<void> {

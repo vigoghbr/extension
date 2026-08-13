@@ -49,6 +49,7 @@ interface ExtensionState {
   sessionAutocompleteEnabled: boolean;
   overlayResetVersion: number;
   userToolsEnabled: Record<string, boolean>;
+  panelVisible: boolean;
 }
 
 export const extensionStore = createStore<ExtensionState>()(() => ({
@@ -64,6 +65,7 @@ export const extensionStore = createStore<ExtensionState>()(() => ({
   sessionAutocompleteEnabled: false,
   overlayResetVersion: 0,
   userToolsEnabled: {},
+  panelVisible: false,
 }));
 
 let strategy: SiteStrategy | null = null;
@@ -556,6 +558,7 @@ export function loadConfig(onLoaded?: () => void): void {
         widgetEnabled,
         widgetVisible: widgetEnabled,
         aiButtonEnabled,
+        panelVisible: !aiButtonEnabled,
       });
 
       if (config.behavior.enabled) {
@@ -606,6 +609,17 @@ export function setCurrentEditor(editor: Element | null): void {
 export function setEditorFocused(focused: boolean): void {
   if (extensionStore.getState().editorFocused === focused) return;
   extensionStore.setState({ editorFocused: focused });
+}
+
+export function setPanelVisible(visible: boolean): void {
+  extensionStore.setState({ panelVisible: visible });
+}
+
+export function activatePanel(): void {
+  const { panelVisible, aiButtonEnabled } = extensionStore.getState();
+  if (!aiButtonEnabled && !panelVisible) {
+    extensionStore.setState({ panelVisible: true });
+  }
 }
 
 export function tryAttachToActiveElement(): void {
@@ -689,7 +703,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const enabled =
       (changes["vigogh-ai-button-enabled"]?.newValue as boolean | undefined) ??
       true;
-    extensionStore.setState({ aiButtonEnabled: enabled });
+    extensionStore.setState((s) => ({
+      aiButtonEnabled: enabled,
+      panelVisible: enabled ? s.panelVisible : true,
+    }));
   }
 
   if (!changes["vigogh-tool-preferences"]) return;

@@ -16,7 +16,6 @@ const fontCss = `@font-face{font-family:"Google Sans";src:url("${fontUrl}") form
 
 export default function App() {
   const widgetVisible = useStore(extensionStore, (s) => s.widgetVisible);
-  const aiButtonEnabled = useStore(extensionStore, (s) => s.aiButtonEnabled);
   const overlayVisible = useStore(autocompleteStore, (s) => s.overlayVisible);
   const config = useStore(extensionStore, (s) => s.config);
   const [appearance, setAppearance] = useState<AiButtonAppearance | null>(null);
@@ -55,8 +54,6 @@ export default function App() {
         .map(([k, v]) => `  ${k}: ${v};`)
         .join("\n")}\n}`
     : "";
-
-  if (!aiButtonEnabled) return null;
 
   return (
     <TooltipProvider portalContainer={tooltipContainer}>

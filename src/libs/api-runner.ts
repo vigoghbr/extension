@@ -101,13 +101,6 @@ axiosApi.interceptors.response.use(
           return axiosApi.request(original);
         }
       }
-      try {
-        await chrome.storage.local.remove([
-          "vigogh-auth-token",
-          "vigogh-auth-refresh-token",
-          "vigogh-auth-token-expires-at",
-        ]);
-      } catch {}
     }
     const status = error.response?.status ?? 0;
     const payload = classifyError(status, error.response?.data);

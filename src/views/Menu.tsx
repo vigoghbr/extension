@@ -4,7 +4,11 @@ import { useStore } from "zustand";
 import { resolveIcon } from "@/libs/icons";
 import { popoverTools } from "@/libs/popover";
 import { openSidePanel, requireSession } from "@/libs/sidepanel";
-import { extensionStore, resolveThemeColors } from "@/stores/extensionStore";
+import {
+  extensionStore,
+  resolveThemeColors,
+  setPanelVisible,
+} from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import {
   autocompleteStore,
@@ -38,6 +42,8 @@ const QUICK_MESSAGES_TOOL_ID = "quick-messages";
 
 export default function Menu() {
   const config = useStore(extensionStore, (s) => s.config);
+  const aiButtonEnabled = useStore(extensionStore, (s) => s.aiButtonEnabled);
+  const panelVisible = useStore(extensionStore, (s) => s.panelVisible);
   const styles = useStore(stylesStore, (s) => s.styles);
   const autocompleteDisabled = useStore(extensionStore, (s) => s.disabled);
   const userToolsEnabled = useStore(extensionStore, (s) => s.userToolsEnabled);
@@ -53,7 +59,6 @@ export default function Menu() {
   );
   const [appearance, setAppearance] = useState<AiButtonAppearance | null>(null);
   const [menuHovered, setMenuHovered] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const circleRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -93,29 +98,31 @@ export default function Menu() {
       const inCircle = circleRef.current && path.includes(circleRef.current);
       const inMenu = menuRef.current && path.includes(menuRef.current);
       if (inCircle || inMenu) return;
-      if (menuOpen) {
-        setMenuOpen(false);
+      if (panelVisible) {
+        setPanelVisible(false);
       }
     };
     document.addEventListener("mousedown", handleMouseDown, true);
     return () =>
       document.removeEventListener("mousedown", handleMouseDown, true);
-  }, [menuOpen]);
+  }, [panelVisible]);
 
   if (!config || !styles) return null;
   const menu = config.widget.menu;
   if (!menu) return null;
 
-  const handleItemClick = (action: () => void) => () => {
-    setMenuOpen(false);
-    void prepareToolContext().then(() => {
-      action();
-    });
+  const handleItemClickNoContext = (action: () => void) => () => {
+    setPanelVisible(false);
+    action();
   };
 
-  const handleItemClickNoContext = (action: () => void) => () => {
-    setMenuOpen(false);
-    action();
+  const handleSessionItemClick = (action: () => void) => () => {
+    setPanelVisible(false);
+    requireSession(() => {
+      void prepareToolContext().then(() => {
+        action();
+      });
+    });
   };
 
   const widgetConfig = config.widget;
@@ -206,7 +213,7 @@ export default function Menu() {
   };
 
   const widgetZIndex = resolveZIndex(
-    { isHovered: menuOpen || menuHovered },
+    { isHovered: panelVisible || menuHovered },
     styles.zLayers,
   );
 
@@ -214,54 +221,56 @@ export default function Menu() {
     <>
       <style>{cssVars}</style>
 
-      <div
-        id="vigogh-ai-button"
-        ref={circleRef}
-        style={{
-          position: "fixed",
-          bottom: `${effectiveBottom}px`,
-          right: `${effectiveRight}px`,
-          zIndex: widgetZIndex,
-          width: `${circleSize}px`,
-          height: `${circleSize}px`,
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          background: `linear-gradient(${styles.widget.circleOverlay}, ${styles.widget.circleOverlay}), linear-gradient(135deg, ${colors.buttonColor1}, ${colors.buttonColor2})`,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: `1px solid ${colors.menuBorderColor}`,
-          boxShadow: colors.containerShadow,
-          opacity: menuOpen ? 0 : 0.45,
-          transform: menuOpen
-            ? `scale(${styles.widget.circleClosedScale})`
-            : "scale(1)",
-          transition: `opacity ${styles.widget.circleTransitionMs}ms ease, transform ${styles.widget.circleTransitionMs}ms ease`,
-          pointerEvents: menuOpen ? "none" : "auto",
-        }}
-        onMouseEnter={() => setMenuOpen(true)}
-        onClick={() =>
-          window.open(widgetConfig.appUrl, "_blank", "noopener,noreferrer")
-        }
-      >
-        <img
-          src={chrome.runtime.getURL(
-            colors.iconVariant === "white"
-              ? "white-icon128.png"
-              : "icon128.png",
-          )}
+      {aiButtonEnabled && (
+        <div
+          id="vigogh-ai-button"
+          ref={circleRef}
           style={{
-            width: `${styles.widget.circleIconSize}px`,
-            height: `${styles.widget.circleIconSize}px`,
-            objectFit: "contain",
-            display: "block",
-            pointerEvents: "none",
+            position: "fixed",
+            bottom: `${effectiveBottom}px`,
+            right: `${effectiveRight}px`,
+            zIndex: widgetZIndex,
+            width: `${circleSize}px`,
+            height: `${circleSize}px`,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            background: `linear-gradient(${styles.widget.circleOverlay}, ${styles.widget.circleOverlay}), linear-gradient(135deg, ${colors.buttonColor1}, ${colors.buttonColor2})`,
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: `1px solid ${colors.menuBorderColor}`,
+            boxShadow: colors.containerShadow,
+            opacity: panelVisible ? 0 : 0.45,
+            transform: panelVisible
+              ? `scale(${styles.widget.circleClosedScale})`
+              : "scale(1)",
+            transition: `opacity ${styles.widget.circleTransitionMs}ms ease, transform ${styles.widget.circleTransitionMs}ms ease`,
+            pointerEvents: panelVisible ? "none" : "auto",
           }}
-          alt="Vigogh"
-        />
-      </div>
+          onMouseEnter={() => setPanelVisible(true)}
+          onClick={() =>
+            window.open(widgetConfig.appUrl, "_blank", "noopener,noreferrer")
+          }
+        >
+          <img
+            src={chrome.runtime.getURL(
+              colors.iconVariant === "white"
+                ? "white-icon128.png"
+                : "icon128.png",
+            )}
+            style={{
+              width: `${styles.widget.circleIconSize}px`,
+              height: `${styles.widget.circleIconSize}px`,
+              objectFit: "contain",
+              display: "block",
+              pointerEvents: "none",
+            }}
+            alt="Vigogh"
+          />
+        </div>
+      )}
 
       <div
         ref={menuRef}
@@ -283,13 +292,13 @@ export default function Menu() {
           borderRadius: menuBorderRadius,
           boxShadow: colors.containerShadow,
           overflow: "hidden",
-          opacity: menuOpen ? 1 : 0,
-          transform: menuOpen
+          opacity: panelVisible ? 1 : 0,
+          transform: panelVisible
             ? "scale(1)"
             : `scale(${styles.widget.menuClosedScale})`,
           transformOrigin: "bottom right",
           transition: `opacity ${styles.widget.menuTransitionMs}ms ease, transform ${styles.widget.menuTransitionMs}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
-          pointerEvents: menuOpen ? "auto" : "none",
+          pointerEvents: panelVisible ? "auto" : "none",
         }}
         onMouseEnter={() => setMenuHovered(true)}
         onMouseLeave={() => setMenuHovered(false)}
@@ -365,20 +374,18 @@ export default function Menu() {
                     paddingV={pillPaddingV}
                     paddingH={pillPaddingH}
                     borderRadius={pillBorderRadius}
-                    onClick={handleItemClick(() => {
-                      requireSession(() => {
-                        setDirection("");
-                        const itemPages = item.pages?.length
-                          ? item.pages
-                          : [{ type: "options" as const }];
-                        const itemFirstPage = itemPages[0]?.type ?? "options";
-                        setActiveInputItem(item);
-                        if (itemFirstPage === "options") {
-                          requestAnswers(item.id);
-                        } else {
-                          openMenu();
-                        }
-                      });
+                    onClick={handleSessionItemClick(() => {
+                      setDirection("");
+                      const itemPages = item.pages?.length
+                        ? item.pages
+                        : [{ type: "options" as const }];
+                      const itemFirstPage = itemPages[0]?.type ?? "options";
+                      setActiveInputItem(item);
+                      if (itemFirstPage === "options") {
+                        requestAnswers(item.id);
+                      } else {
+                        openMenu();
+                      }
                     })}
                   />
                 );
@@ -402,11 +409,9 @@ export default function Menu() {
                     paddingV={pillPaddingV}
                     paddingH={pillPaddingH}
                     borderRadius={pillBorderRadius}
-                    onClick={
-                      autocompleteDisabled
-                        ? handleItemClick(() => toggleAutocomplete())
-                        : handleItemClickNoContext(() => toggleAutocomplete())
-                    }
+                    onClick={handleItemClickNoContext(() =>
+                      toggleAutocomplete(),
+                    )}
                   />
                 );
               }
@@ -426,11 +431,13 @@ export default function Menu() {
                     paddingV={pillPaddingV}
                     paddingH={pillPaddingH}
                     borderRadius={pillBorderRadius}
-                    onClick={handleItemClick(() => {
+                    onClick={handleItemClickNoContext(() => {
                       if (item.linkAction === "open_chat") {
                         requireSession(() => {
-                          openMenu();
-                          openChat();
+                          void prepareToolContext().then(() => {
+                            openMenu();
+                            openChat();
+                          });
                         });
                       } else if (item.linkAction === "open_app") {
                         closePopover();
@@ -534,15 +541,13 @@ export default function Menu() {
                         paddingV={pillPaddingV}
                         paddingH={pillPaddingH}
                         borderRadius={pillBorderRadius}
-                        onClick={handleItemClick(() => {
-                          requireSession(() => {
-                            openMenu();
-                            applyTransform(
-                              item.id,
-                              item.transformAction,
-                              item.autoApply,
-                            );
-                          });
+                        onClick={handleSessionItemClick(() => {
+                          openMenu();
+                          applyTransform(
+                            item.id,
+                            item.transformAction,
+                            item.autoApply,
+                          );
                         })}
                       />
                     );

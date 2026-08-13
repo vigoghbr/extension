@@ -1,17 +1,14 @@
 import { createRoot } from "react-dom/client";
-import { installGlobalHandlers, logger } from "@/libs/logger";
-
-installGlobalHandlers();
-
 import { initSessionCache as initAuthSessionCache } from "@/libs/auth";
+import { installGlobalHandlers, logger } from "@/libs/logger";
 import { extractPageContent } from "@/libs/page-content-extraction";
 import { extractPageForms } from "@/libs/page-forms-extraction";
 import { extractPageMetadata } from "@/libs/page-metadata-extraction";
 import { extractPageURL } from "@/libs/page-url-extraction";
 import { initSessionCache } from "@/libs/session";
-import { requireSession } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
 import {
+  activatePanel,
   extensionStore,
   getActiveStrategy,
   getEditorSelector,
@@ -37,6 +34,7 @@ import App from "@/views/App";
 
 if (!(window as any).__vigoghInit) {
   (window as any).__vigoghInit = true;
+  installGlobalHandlers();
 
   function mount(): void {
     const host = document.createElement("div");
@@ -53,9 +51,7 @@ if (!(window as any).__vigoghInit) {
       onCaughtError: (error) => logger.error("react:caught", { error }),
     }).render(<App />);
 
-    loadConfig(() => {
-      void promptLoginIfNeeded();
-    });
+    loadConfig();
     void initAuthSessionCache();
     void initSessionCache();
     initIndicatorListener();
@@ -68,11 +64,6 @@ if (!(window as any).__vigoghInit) {
         });
       } catch {}
     }
-  }
-
-  async function promptLoginIfNeeded(): Promise<void> {
-    await Promise.all([initAuthSessionCache(), initSessionCache()]);
-    requireSession(() => {});
   }
 
   function notifyExtensionStatus(): void {
@@ -344,6 +335,9 @@ if (!(window as any).__vigoghInit) {
         if (bottom) bottom.style.visibility = "";
         const top = document.getElementById("vigogh-top-indicator");
         if (top) top.style.visibility = "";
+      }
+      if (msg.action === "activate_widget") {
+        activatePanel();
       }
     });
   }
