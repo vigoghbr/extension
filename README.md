@@ -13,13 +13,13 @@ Browser extensions ask for meaningful access: reading the active tab, running sc
 - **Does**: capture page content/screenshot on demand, forward it to the Vigogh API, and insert the AI-generated result back into the page.
 - **Does not**: run any AI model, store page content persistently, or observe pages you haven't explicitly interacted with.
 
-Captured page data lives in the background worker's memory only, for the duration of a single request, and is discarded immediately after. There is no persistent history of what you've captured.
+Captured page data lives in the background worker's memory only long enough to send it to the backend. On the backend, it's retained only while it's in use, then discarded. There is no persistent history of what you've captured.
 
 ## Architecture
 
 Three layers, each with a narrow responsibility:
 
-- **Background service worker** — handles the extension icon click, orchestrates on-demand script injection into the active tab, and holds captured page data in memory just long enough to forward it.
+- **Background service worker** — handles the extension icon click, orchestrates on-demand script injection into the active tab, and holds captured page data in memory just long enough to send it to the backend.
 - **Side panel** — a thin shell hosting an iframe that loads the Vigogh web app. A bridge module relays messages between the iframe (`postMessage`) and the background worker (`chrome.runtime`).
 - **Content script** — bootstraps in-page tools (autocomplete, answers, text transforms) inside a shadow DOM, so extension styles never leak into or out of the host page.
 
