@@ -200,6 +200,7 @@ export type ExtensionMessage =
   | FilesRenameMessage
   | FilesDeleteMessage
   | FilesFetchBlobMessage
+  | FilesDownloadMessage
   | ApiRequestMessage
   | SeriousErrorBroadcastMessage
   | SeriousErrorToastMessage
@@ -247,6 +248,17 @@ export interface FilesFetchBlobResponse {
   success: boolean;
   base64?: string;
   mimeType?: string;
+  error?: string;
+  noToken?: boolean;
+}
+
+export interface FilesDownloadMessage {
+  action: "files_download";
+  downloadUrl: string;
+}
+
+export interface FilesDownloadResponse {
+  success: boolean;
   error?: string;
   noToken?: boolean;
 }

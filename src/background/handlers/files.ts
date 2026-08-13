@@ -97,6 +97,19 @@ export const handleMessages: BackgroundMessageHandler = (
     })();
     return true;
   }
+  if (message.action === "files_download") {
+    chrome.tabs.create({ url: message.downloadUrl }, (tab) => {
+      if (chrome.runtime.lastError || !tab) {
+        sendResponse({
+          success: false,
+          error: chrome.runtime.lastError?.message ?? "Failed to open tab",
+        });
+        return;
+      }
+      sendResponse({ success: true });
+    });
+    return true;
+  }
   if (message.action === "files_delete") {
     api
       .delete(getEndpoint("filesById", { fileId: message.fileId }))
