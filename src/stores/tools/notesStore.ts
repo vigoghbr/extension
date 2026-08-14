@@ -1,13 +1,13 @@
 import { createStore } from "zustand/vanilla";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
-import {
-  hideBottomBorder,
-  hideTopBorder,
-  showBottomBorder,
-  showTopBorder,
-} from "@/stores/borderStore";
 import { extensionStore } from "@/stores/extensionStore";
+import {
+  hideBottomIndicator,
+  hideTopIndicator,
+  showBottomIndicator,
+  showTopIndicator,
+} from "@/stores/indicatorStore";
 import { hideStickyNote } from "@/stores/stickyNotesStore";
 import type { Note } from "@/types";
 
@@ -27,25 +27,25 @@ export const notesStore = createStore<NotesState>()(() => ({
 
 export function fetchNotes(): void {
   notesStore.setState({ status: "loading", error: null });
-  showBottomBorder();
+  showBottomIndicator();
   api
     .get<{ data: { notes: Note[] } }>(getEndpoint("notes"))
     .then((res) => {
       notesStore.setState({ items: res.data.data.notes, status: "success" });
-      hideBottomBorder();
+      hideBottomIndicator();
     })
     .catch(() => {
       notesStore.setState({
         status: "error",
         error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "",
       });
-      hideBottomBorder();
+      hideBottomIndicator();
     });
 }
 
 export function createNote(content: string): Promise<Note | null> {
   notesStore.setState({ saveStatus: "loading" });
-  showTopBorder();
+  showTopIndicator();
   return api
     .post<{ data: Note }>(getEndpoint("notes"), { content })
     .then((res) => {
@@ -53,19 +53,19 @@ export function createNote(content: string): Promise<Note | null> {
         items: [...s.items, res.data.data],
         saveStatus: "success",
       }));
-      hideTopBorder();
+      hideTopIndicator();
       return res.data.data;
     })
     .catch(() => {
       notesStore.setState({ saveStatus: "error" });
-      hideTopBorder();
+      hideTopIndicator();
       return null;
     });
 }
 
 export function updateNote(id: string, content: string): Promise<void> {
   notesStore.setState({ saveStatus: "loading" });
-  showTopBorder();
+  showTopIndicator();
   return api
     .patch<{ data: Note }>(getEndpoint("notesById", { id }), { content })
     .then((res) => {
@@ -73,11 +73,11 @@ export function updateNote(id: string, content: string): Promise<void> {
         items: s.items.map((n) => (n.id === id ? res.data.data : n)),
         saveStatus: "success",
       }));
-      hideTopBorder();
+      hideTopIndicator();
     })
     .catch(() => {
       notesStore.setState({ saveStatus: "error" });
-      hideTopBorder();
+      hideTopIndicator();
       throw new Error();
     });
 }
@@ -86,15 +86,15 @@ export function deleteNote(id: string): void {
   const previous = notesStore.getState().items;
   hideStickyNote(id);
   notesStore.setState((s) => ({ items: s.items.filter((n) => n.id !== id) }));
-  showBottomBorder();
+  showBottomIndicator();
   api
     .delete(getEndpoint("notesById", { id }))
     .then(() => {
-      hideBottomBorder();
+      hideBottomIndicator();
     })
     .catch(() => {
       notesStore.setState({ items: previous });
-      hideBottomBorder();
+      hideBottomIndicator();
     });
 }
 
@@ -112,7 +112,7 @@ export function toggleNoteAI(id: string): void {
       n.id === id ? { ...n, disabledForAI: nextDisabled } : n,
     ),
   });
-  showBottomBorder();
+  showBottomIndicator();
   api
     .patch<{ data: Note }>(getEndpoint("notesById", { id }), {
       disabledForAI: nextDisabled,
@@ -121,10 +121,10 @@ export function toggleNoteAI(id: string): void {
       notesStore.setState((s) => ({
         items: s.items.map((n) => (n.id === id ? res.data.data : n)),
       }));
-      hideBottomBorder();
+      hideBottomIndicator();
     })
     .catch(() => {
       notesStore.setState({ items: previous });
-      hideBottomBorder();
+      hideBottomIndicator();
     });
 }

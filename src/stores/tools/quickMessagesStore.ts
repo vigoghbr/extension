@@ -1,13 +1,13 @@
 import { createStore } from "zustand/vanilla";
 import api from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
-import {
-  hideBottomBorder,
-  hideTopBorder,
-  showBottomBorder,
-  showTopBorder,
-} from "@/stores/borderStore";
 import { extensionStore } from "@/stores/extensionStore";
+import {
+  hideBottomIndicator,
+  hideTopIndicator,
+  showBottomIndicator,
+  showTopIndicator,
+} from "@/stores/indicatorStore";
 import type { QuickMessage } from "@/types";
 
 interface QuickMessagesState {
@@ -26,7 +26,7 @@ export const quickMessagesStore = createStore<QuickMessagesState>()(() => ({
 
 export function fetchQuickMessages(): void {
   quickMessagesStore.setState({ status: "loading", error: null });
-  showBottomBorder();
+  showBottomIndicator();
   api
     .get<{ data: { messages: QuickMessage[] } }>(getEndpoint("quickMessages"))
     .then((res) => {
@@ -34,20 +34,20 @@ export function fetchQuickMessages(): void {
         items: res.data.data.messages,
         status: "success",
       });
-      hideBottomBorder();
+      hideBottomIndicator();
     })
     .catch(() => {
       quickMessagesStore.setState({
         status: "error",
         error: extensionStore.getState().config?.messages.errors.DEFAULT ?? "",
       });
-      hideBottomBorder();
+      hideBottomIndicator();
     });
 }
 
 export function createQuickMessage(text: string): Promise<void> {
   quickMessagesStore.setState({ saveStatus: "loading" });
-  showTopBorder();
+  showTopIndicator();
   return api
     .post<{ data: QuickMessage }>(getEndpoint("quickMessages"), { text })
     .then((res) => {
@@ -55,18 +55,18 @@ export function createQuickMessage(text: string): Promise<void> {
         items: [...s.items, res.data.data],
         saveStatus: "success",
       }));
-      hideTopBorder();
+      hideTopIndicator();
     })
     .catch(() => {
       quickMessagesStore.setState({ saveStatus: "error" });
-      hideTopBorder();
+      hideTopIndicator();
       throw new Error();
     });
 }
 
 export function updateQuickMessage(id: string, text: string): Promise<void> {
   quickMessagesStore.setState({ saveStatus: "loading" });
-  showTopBorder();
+  showTopIndicator();
   return api
     .patch<{ data: QuickMessage }>(getEndpoint("quickMessagesById", { id }), {
       text,
@@ -76,26 +76,26 @@ export function updateQuickMessage(id: string, text: string): Promise<void> {
         items: s.items.map((m) => (m.id === id ? res.data.data : m)),
         saveStatus: "success",
       }));
-      hideTopBorder();
+      hideTopIndicator();
     })
     .catch(() => {
       quickMessagesStore.setState({ saveStatus: "error" });
-      hideTopBorder();
+      hideTopIndicator();
       throw new Error();
     });
 }
 
 export function deleteQuickMessage(id: string): void {
-  showBottomBorder();
+  showBottomIndicator();
   api
     .delete(getEndpoint("quickMessagesById", { id }))
     .then(() => {
       quickMessagesStore.setState((s) => ({
         items: s.items.filter((m) => m.id !== id),
       }));
-      hideBottomBorder();
+      hideBottomIndicator();
     })
     .catch(() => {
-      hideBottomBorder();
+      hideBottomIndicator();
     });
 }

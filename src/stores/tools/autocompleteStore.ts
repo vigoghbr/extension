@@ -1,11 +1,14 @@
 import { createStore } from "zustand/vanilla";
-import type { IdentifyFieldHandle } from "@/libs/field-identifier";
+import {
+  type IdentifyFieldHandle,
+  identifyField,
+} from "@/libs/field-identifier";
 import { requireSession } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
 import {
   extensionStore,
+  resolveInitialTargetField,
   resolveStrategyForElement,
-  resolveTargetField,
 } from "@/stores/extensionStore";
 import { prepareToolContext } from "@/stores/tools/contextStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -39,6 +42,7 @@ export const autocompleteStore = createStore<AutocompleteState>()(() => ({
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingIdentify: IdentifyFieldHandle | null = null;
+let fieldWatchdog: MutationObserver | null = null;
 
 export function clearDebounce(): void {
   if (debounceTimer) {
@@ -202,9 +206,49 @@ function cancelPendingIdentify(): void {
   }
 }
 
+function startFieldWatchdog(): void {
+  if (fieldWatchdog) return;
+  fieldWatchdog = new MutationObserver(() => {
+    const { autocompleteEditor } = autocompleteStore.getState();
+    if (autocompleteEditor && !autocompleteEditor.isConnected) {
+      reactivateAutocompleteField();
+    }
+  });
+  fieldWatchdog.observe(document.body, { childList: true, subtree: true });
+}
+
+function stopFieldWatchdog(): void {
+  fieldWatchdog?.disconnect();
+  fieldWatchdog = null;
+}
+
+export function reactivateAutocompleteField(): void {
+  if (extensionStore.getState().disabled) return;
+  if (pendingIdentify) return;
+
+  clearDebounce();
+  extensionStore.setState({ caretCoordinates: null });
+  autocompleteStore.setState({
+    autocompleteEditor: null,
+    overlayVisible: false,
+    currentCompletion: "",
+    currentCompletionId: "",
+  });
+
+  const handle = identifyField("IDENTIFY_AUTOCOMPLETE_FIELD");
+  pendingIdentify = handle;
+  handle.promise.then((editor) => {
+    if (pendingIdentify !== handle) return;
+    pendingIdentify = null;
+    autocompleteStore.setState({ autocompleteEditor: editor });
+    toastr.neutral("AUTOCOMPLETE_ENABLED");
+    prepareToolContext();
+  });
+}
+
 export function armAutocomplete(): void {
   cancelPendingIdentify();
-  const handle = resolveTargetField("IDENTIFY_AUTOCOMPLETE_FIELD");
+  const handle = resolveInitialTargetField("IDENTIFY_AUTOCOMPLETE_FIELD");
   pendingIdentify = handle;
   handle.promise.then((editor) => {
     if (pendingIdentify !== handle) return;
@@ -216,12 +260,14 @@ export function armAutocomplete(): void {
     });
     toastr.neutral("AUTOCOMPLETE_ENABLED");
     prepareToolContext();
+    startFieldWatchdog();
   });
 }
 
 export function disarmAutocomplete(): void {
   cancelPendingIdentify();
   clearDebounce();
+  stopFieldWatchdog();
   extensionStore.setState({
     disabled: true,
     caretCoordinates: null,

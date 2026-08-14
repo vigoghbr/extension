@@ -16,12 +16,13 @@ import {
   setCurrentEditor,
   setEditorFocused,
 } from "@/stores/extensionStore";
-import { initIndicatorListener } from "@/stores/indicatorsStore";
+import { initIndicatorListener } from "@/stores/indicatorStore";
 import {
   acceptCompletion,
   autocompleteStore,
   clearSuppress,
   dismissCompletion,
+  reactivateAutocompleteField,
   scheduleCompletion,
 } from "@/stores/tools/autocompleteStore";
 import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
@@ -129,7 +130,18 @@ if (!(window as any).__vigoghInit) {
       "focusout",
       (e: FocusEvent) => {
         const related = e.relatedTarget as Node | null;
-        if (related && (related === host || host.contains(related))) return;
+        const target = e.target as Node | null;
+        const blurredIntoHost =
+          !!related && (related === host || host.contains(related));
+
+        if (!blurredIntoHost) {
+          const { autocompleteEditor } = autocompleteStore.getState();
+          if (autocompleteEditor && target === autocompleteEditor) {
+            reactivateAutocompleteField();
+          }
+        }
+
+        if (blurredIntoHost) return;
         if (widgetStore.getState().activePopovers.length > 0) return;
         if (autocompleteStore.getState().overlayVisible) return;
         const { currentEditor } = extensionStore.getState();

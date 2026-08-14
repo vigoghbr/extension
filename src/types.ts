@@ -1015,7 +1015,8 @@ export interface ExtensionSettings {
     windowDragMarginPx?: number;
     pageContentMaxSizeKB?: number;
     pageScreenshotMaxSizeKB?: number;
-    pageIndicatorMaxDurationMs?: number;
+    topIndicatorMaxDurationMs?: number;
+    bottomIndicatorMaxDurationMs?: number;
     toastMaxDurationMs?: number;
   };
   overlay: {
@@ -1072,7 +1073,8 @@ export interface ResolvedBehaviorConfig {
   windowDragMarginPx?: number;
   pageContentMaxSizeKB?: number;
   pageScreenshotMaxSizeKB?: number;
-  pageIndicatorMaxDurationMs?: number;
+  topIndicatorMaxDurationMs?: number;
+  bottomIndicatorMaxDurationMs?: number;
   toastMaxDurationMs?: number;
 }
 

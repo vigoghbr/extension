@@ -87,7 +87,9 @@ export function resolveStrategyForElement(
   return usesSiteStrategy ? strategy : generalStrategy;
 }
 
-export function resolveTargetField(toastCode: string): IdentifyFieldHandle {
+export function resolveInitialTargetField(
+  toastCode: string,
+): IdentifyFieldHandle {
   const { siteConfig } = extensionStore.getState();
   if (siteConfig?.editorSelector) {
     const editor = document.querySelector(
@@ -322,7 +324,8 @@ export function resolveConfig(
       windowDragMarginPx: raw.behavior.windowDragMarginPx,
       pageContentMaxSizeKB: raw.behavior.pageContentMaxSizeKB,
       pageScreenshotMaxSizeKB: raw.behavior.pageScreenshotMaxSizeKB,
-      pageIndicatorMaxDurationMs: raw.behavior.pageIndicatorMaxDurationMs,
+      topIndicatorMaxDurationMs: raw.behavior.topIndicatorMaxDurationMs,
+      bottomIndicatorMaxDurationMs: raw.behavior.bottomIndicatorMaxDurationMs,
       toastMaxDurationMs: raw.behavior.toastMaxDurationMs,
     },
     overlay: {

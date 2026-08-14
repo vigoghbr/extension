@@ -1,6 +1,9 @@
 import { toastr } from "@/libs/toastr";
-import { hideBottomBorder, showBottomBorder } from "@/stores/borderStore";
 import { extensionStore } from "@/stores/extensionStore";
+import {
+  hideBottomIndicator,
+  showBottomIndicator,
+} from "@/stores/indicatorStore";
 import type { FilesDownloadResponse, FilesFetchBlobResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { attachFileToPage } from "@/utils/files-inject";
@@ -67,9 +70,9 @@ export async function triggerAttach(item: AttachableFile): Promise<void> {
 
   const loadingId = toastr.loading("FILE_ATTACH_LOADING");
 
-  showBottomBorder();
+  showBottomIndicator();
   const blob = await fetchBlob(item);
-  hideBottomBorder();
+  hideBottomIndicator();
   if (!blob) {
     const opened = await openDownloadTab(item);
     toastr.dismiss(loadingId);
