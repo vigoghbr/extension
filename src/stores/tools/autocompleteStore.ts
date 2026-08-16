@@ -18,7 +18,8 @@ type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 interface AutocompleteState {
   autocompleteEditor: HTMLElement | null;
-  currentCompletion: string;
+  suggestions: string[];
+  currentIndex: number;
   currentSavedText: string;
   currentCompletionId: string;
   overlayVisible: boolean;
@@ -30,7 +31,8 @@ interface AutocompleteState {
 
 export const autocompleteStore = createStore<AutocompleteState>()(() => ({
   autocompleteEditor: null,
-  currentCompletion: "",
+  suggestions: [],
+  currentIndex: 0,
   currentSavedText: "",
   currentCompletionId: "",
   overlayVisible: false,
@@ -83,7 +85,7 @@ function requestCompletionInternal(
       const current = autocompleteStore.getState();
       if (current.requestGeneration !== newGen) return;
       if (current.suppressUntilKeydown) return;
-      if (!response?.success || !response.completion) {
+      if (!response?.success || !response.completions?.length) {
         if (response?.reason === "unauthenticated") {
           disarmAutocomplete();
           requestLogin();
@@ -113,7 +115,8 @@ function requestCompletionInternal(
 
       extensionStore.setState({ caretCoordinates: caret });
       autocompleteStore.setState({
-        currentCompletion: response.completion,
+        suggestions: response.completions,
+        currentIndex: 0,
         currentSavedText: text,
         currentCompletionId: response.toolUsageId ?? "",
         overlayVisible: true,
@@ -133,7 +136,8 @@ export function scheduleCompletion(): void {
   extensionStore.setState({ caretCoordinates: null });
   autocompleteStore.setState({
     overlayVisible: false,
-    currentCompletion: "",
+    suggestions: [],
+    currentIndex: 0,
     currentCompletionId: "",
   });
   clearDebounce();
@@ -159,10 +163,11 @@ export function requestResponseNow(): void {
 export function acceptCompletion(): void {
   const state = autocompleteStore.getState();
   const editor = state.autocompleteEditor;
-  if (!editor || !state.currentCompletion) return;
+  const completion = state.suggestions[state.currentIndex];
+  if (!editor || !completion) return;
 
-  const completion = state.currentCompletion;
   const completionId = state.currentCompletionId;
+  const suggestionIndex = state.currentIndex + 1;
   const strategy = resolveStrategyForElement(editor);
 
   extensionStore.setState({ caretCoordinates: null });
@@ -170,7 +175,8 @@ export function acceptCompletion(): void {
     suppressUntilKeydown: true,
     requestGeneration: state.requestGeneration + 1,
     overlayVisible: false,
-    currentCompletion: "",
+    suggestions: [],
+    currentIndex: 0,
     currentCompletionId: "",
   });
 
@@ -182,6 +188,7 @@ export function acceptCompletion(): void {
     chrome.runtime.sendMessage({
       action: "autocomplete_accept",
       toolUsageId: completionId,
+      suggestionIndex,
     });
   }
 }
@@ -190,9 +197,21 @@ export function dismissCompletion(): void {
   extensionStore.setState({ caretCoordinates: null });
   autocompleteStore.setState({
     overlayVisible: false,
-    currentCompletion: "",
+    suggestions: [],
+    currentIndex: 0,
     currentCompletionId: "",
   });
+}
+
+export function cycleCompletion(direction: "prev" | "next"): void {
+  const state = autocompleteStore.getState();
+  if (!state.overlayVisible || state.suggestions.length < 2) return;
+
+  const delta = direction === "next" ? 1 : -1;
+  const length = state.suggestions.length;
+  const currentIndex = (state.currentIndex + delta + length) % length;
+
+  autocompleteStore.setState({ currentIndex });
 }
 
 export function clearSuppress(): void {
@@ -231,7 +250,8 @@ export function reactivateAutocompleteField(): void {
   autocompleteStore.setState({
     autocompleteEditor: null,
     overlayVisible: false,
-    currentCompletion: "",
+    suggestions: [],
+    currentIndex: 0,
     currentCompletionId: "",
   });
 
@@ -276,7 +296,8 @@ export function disarmAutocomplete(): void {
   autocompleteStore.setState((state) => ({
     autocompleteEditor: null,
     overlayVisible: false,
-    currentCompletion: "",
+    suggestions: [],
+    currentIndex: 0,
     currentCompletionId: "",
     requestGeneration: state.requestGeneration + 1,
   }));

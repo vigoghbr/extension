@@ -20,6 +20,7 @@ export interface AutocompleteRequestMessage {
 export interface AutocompleteAcceptMessage {
   action: "autocomplete_accept";
   toolUsageId: string;
+  suggestionIndex: number;
 }
 
 export interface SetAuthTokenMessage {
@@ -336,7 +337,7 @@ export interface ToolResponse {
 
 export interface AutocompleteResponse {
   success: boolean;
-  completion?: string;
+  completions?: string[];
   toolUsageId?: string;
   error?: string;
   errorCode?: string;
@@ -1005,6 +1006,8 @@ export interface ExtensionSettings {
     captureCooldownMs?: number;
     acceptKey?: string;
     dismissKey?: string;
+    prevKey?: string;
+    nextKey?: string;
     minSelectionLength?: number;
     captureDelayMs?: number;
     filesAttachDragSuppressMs?: number;
@@ -1026,6 +1029,8 @@ export interface ExtensionSettings {
     badgeFontSize: string;
     maxDisplayLength?: number;
     badgeText?: LocaleString;
+    prevBadgeText?: LocaleString;
+    nextBadgeText?: LocaleString;
     acceptLabel?: LocaleString;
     cancelLabel?: LocaleString;
     autocompletePageTitle?: LocaleString;
@@ -1063,6 +1068,8 @@ export interface ResolvedBehaviorConfig {
   captureCooldownMs?: number;
   acceptKey?: string;
   dismissKey?: string;
+  prevKey?: string;
+  nextKey?: string;
   minSelectionLength?: number;
   captureDelayMs?: number;
   filesAttachDragSuppressMs?: number;
@@ -1085,6 +1092,8 @@ export interface ResolvedOverlayConfig {
   badgeFontSize: string;
   maxDisplayLength?: number;
   badgeText: string;
+  prevBadgeText: string;
+  nextBadgeText: string;
   acceptLabel: string;
   cancelLabel: string;
   autocompletePageTitle: string;

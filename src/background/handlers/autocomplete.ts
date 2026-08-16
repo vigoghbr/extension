@@ -27,7 +27,7 @@ async function handleAutocompleteRequest(
     });
     return {
       success: true,
-      completion: data.data?.completion || "",
+      completions: data.data?.completions || [],
       toolUsageId: data.data?.toolUsageId,
     };
   } catch {
@@ -35,10 +35,15 @@ async function handleAutocompleteRequest(
   }
 }
 
-async function handleAutocompleteAccept(toolUsageId: string): Promise<void> {
+async function handleAutocompleteAccept(
+  toolUsageId: string,
+  suggestionIndex: number,
+): Promise<void> {
   const stored = await chrome.storage.local.get("vigogh-auth-token");
   if (!stored["vigogh-auth-token"]) return;
-  api.post(getEndpoint("autocompleteAccept"), { toolUsageId }).catch(() => {});
+  api
+    .post(getEndpoint("autocompleteAccept"), { toolUsageId, suggestionIndex })
+    .catch(() => {});
 }
 
 export const handleMessages: BackgroundMessageHandler = (
@@ -54,7 +59,10 @@ export const handleMessages: BackgroundMessageHandler = (
     return true;
   }
   if (message.action === "autocomplete_accept") {
-    handleAutocompleteAccept(message.toolUsageId).catch(() => {});
+    handleAutocompleteAccept(
+      message.toolUsageId,
+      message.suggestionIndex,
+    ).catch(() => {});
     sendResponse({ success: true });
     return false;
   }

@@ -21,6 +21,7 @@ import {
   acceptCompletion,
   autocompleteStore,
   clearSuppress,
+  cycleCompletion,
   dismissCompletion,
   reactivateAutocompleteField,
   scheduleCompletion,
@@ -215,6 +216,8 @@ if (!(window as any).__vigoghInit) {
         if (!config) return;
         const acceptKey = config.behavior.acceptKey;
         const dismissKey = config.behavior.dismissKey;
+        const prevKey = config.behavior.prevKey ?? "ArrowLeft";
+        const nextKey = config.behavior.nextKey ?? "ArrowRight";
         if (e.key === acceptKey) {
           e.preventDefault();
           e.stopPropagation();
@@ -224,6 +227,12 @@ if (!(window as any).__vigoghInit) {
         if (e.key === dismissKey) {
           e.preventDefault();
           dismissCompletion();
+          return;
+        }
+        if (e.key === prevKey || e.key === nextKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          cycleCompletion(e.key === prevKey ? "prev" : "next");
         }
       },
       true,

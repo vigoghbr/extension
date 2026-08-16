@@ -5,6 +5,7 @@ import { extensionStore } from "@/stores/extensionStore";
 import {
   acceptCompletion,
   autocompleteStore,
+  cycleCompletion,
 } from "@/stores/tools/autocompleteStore";
 
 interface EditorStyles {
@@ -38,10 +39,9 @@ export default function Overlay() {
   const currentEditor = useStore(extensionStore, (s) => s.currentEditor);
   const caretCoordinates = useStore(extensionStore, (s) => s.caretCoordinates);
   const config = useStore(extensionStore, (s) => s.config);
-  const currentCompletion = useStore(
-    autocompleteStore,
-    (s) => s.currentCompletion,
-  );
+  const suggestions = useStore(autocompleteStore, (s) => s.suggestions);
+  const currentIndex = useStore(autocompleteStore, (s) => s.currentIndex);
+  const currentCompletion = suggestions[currentIndex] ?? "";
   const [editorStyles, setEditorStyles] = useState<EditorStyles | null>(null);
   const [, setTick] = useState(0);
 
@@ -85,66 +85,114 @@ export default function Overlay() {
     : "";
   const badgeFont = `${overlayConfig.badgeFontSize} ${editorStyles?.fontFamily ?? "sans-serif"}`;
 
+  const prevBadgeWidth =
+    measureWidth(overlayConfig.prevBadgeText, badgeFont) +
+    overlayConfig.badgePaddingX;
+  const nextBadgeWidth =
+    measureWidth(overlayConfig.nextBadgeText, badgeFont) +
+    overlayConfig.badgePaddingX;
+  const tabBadgeWidth =
+    measureWidth(overlayConfig.badgeText, badgeFont) +
+    overlayConfig.badgePaddingX;
+  const badgesGroupWidth =
+    prevBadgeWidth +
+    nextBadgeWidth +
+    tabBadgeWidth +
+    overlayConfig.badgeGap * 2;
+
   let displayText = currentCompletion;
+  let badgesLeft =
+    caretCoordinates.left +
+    measureWidth(currentCompletion, textFont) +
+    overlayConfig.badgeGap;
+
   if (currentEditor && editorStyles) {
     const editorEl = currentEditor as HTMLElement;
     const rect = editorEl.getBoundingClientRect();
     const paddingRight =
       parseFloat(window.getComputedStyle(editorEl).paddingRight) || 0;
     const rightEdge = rect.right - paddingRight;
-    const badgeWidth =
-      measureWidth(overlayConfig.badgeText, badgeFont) +
-      overlayConfig.badgePaddingX;
+    badgesLeft = rightEdge - badgesGroupWidth - overlayConfig.badgeSafetyPad;
     const available =
-      rightEdge -
-      caretCoordinates.left -
-      badgeWidth -
-      overlayConfig.badgeGap -
-      overlayConfig.badgeSafetyPad;
+      badgesLeft - caretCoordinates.left - overlayConfig.badgeGap;
     displayText = fitText(currentCompletion, available, textFont);
   }
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleAcceptMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     acceptCompletion();
   };
 
+  const handleCycleMouseDown =
+    (direction: "prev" | "next") => (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cycleCompletion(direction);
+    };
+
+  const badgeStyle = {
+    background: overlayConfig.badgeBackground,
+    fontSize: overlayConfig.badgeFontSize,
+    color: overlayConfig.color,
+  };
+
   return (
-    <div
-      className="fixed z-[2147483647] pointer-events-none inline-flex items-center"
-      style={{
-        top: `${caretCoordinates.top}px`,
-        left: `${caretCoordinates.left}px`,
-        height: `${caretCoordinates.height}px`,
-      }}
-    >
-      <span
-        onMouseDown={handleMouseDown}
-        className="pointer-events-auto cursor-pointer whitespace-pre select-none"
+    <>
+      <div
+        className="fixed z-[2147483647] pointer-events-none inline-flex items-center"
         style={{
-          color: overlayConfig.color,
-          opacity: Number(overlayConfig.opacity),
-          fontFamily: editorStyles?.fontFamily,
-          fontSize: editorStyles?.fontSize,
-          fontWeight: editorStyles?.fontWeight,
-          lineHeight: editorStyles?.lineHeight,
-          letterSpacing: editorStyles?.letterSpacing,
+          top: `${caretCoordinates.top}px`,
+          left: `${caretCoordinates.left}px`,
+          height: `${caretCoordinates.height}px`,
         }}
       >
-        {displayText}
-      </span>
-      <span
-        onMouseDown={handleMouseDown}
-        className="pointer-events-auto cursor-pointer rounded-sm px-1 ml-1 select-none align-baseline"
+        <span
+          onMouseDown={handleAcceptMouseDown}
+          className="pointer-events-auto cursor-pointer whitespace-pre select-none"
+          style={{
+            color: overlayConfig.color,
+            opacity: Number(overlayConfig.opacity),
+            fontFamily: editorStyles?.fontFamily,
+            fontSize: editorStyles?.fontSize,
+            fontWeight: editorStyles?.fontWeight,
+            lineHeight: editorStyles?.lineHeight,
+            letterSpacing: editorStyles?.letterSpacing,
+          }}
+        >
+          {displayText}
+        </span>
+      </div>
+      <div
+        className="fixed z-[2147483647] pointer-events-none inline-flex items-center"
         style={{
-          background: overlayConfig.badgeBackground,
-          fontSize: overlayConfig.badgeFontSize,
-          color: overlayConfig.color,
+          top: `${caretCoordinates.top}px`,
+          left: `${badgesLeft}px`,
+          height: `${caretCoordinates.height}px`,
         }}
       >
-        {overlayConfig.badgeText}
-      </span>
-    </div>
+        <span
+          onMouseDown={handleCycleMouseDown("prev")}
+          className="pointer-events-auto cursor-pointer rounded-sm px-1 select-none align-baseline"
+          style={badgeStyle}
+        >
+          {overlayConfig.prevBadgeText}
+        </span>
+        <span
+          onMouseDown={handleCycleMouseDown("next")}
+          className="pointer-events-auto cursor-pointer rounded-sm px-1 ml-1 select-none align-baseline"
+          style={badgeStyle}
+        >
+          {overlayConfig.nextBadgeText}
+        </span>
+        <span
+          onMouseDown={handleAcceptMouseDown}
+          className="pointer-events-auto cursor-pointer rounded-sm px-1 ml-1 select-none align-baseline"
+          style={badgeStyle}
+        >
+          {overlayConfig.badgeText}
+        </span>
+      </div>
+    </>
   );
 }
