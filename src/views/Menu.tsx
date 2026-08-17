@@ -14,7 +14,7 @@ import {
   autocompleteStore,
   toggleAutocomplete,
 } from "@/stores/tools/autocompleteStore";
-import { prepareToolContext } from "@/stores/tools/contextStore";
+import { prepareToolContextGated } from "@/stores/tools/contextStore";
 import {
   applyTransform,
   requestAnswers,
@@ -119,7 +119,7 @@ export default function Menu() {
   const handleSessionItemClick = (action: () => void) => () => {
     setPanelVisible(false);
     requireSession(() => {
-      void prepareToolContext().then(() => {
+      void prepareToolContextGated().then(() => {
         action();
       });
     });
@@ -434,7 +434,7 @@ export default function Menu() {
                     onClick={handleItemClickNoContext(() => {
                       if (item.linkAction === "open_chat") {
                         requireSession(() => {
-                          void prepareToolContext().then(() => {
+                          void prepareToolContextGated().then(() => {
                             openMenu();
                             openChat();
                           });

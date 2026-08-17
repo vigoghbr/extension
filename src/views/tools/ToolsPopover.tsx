@@ -6,6 +6,7 @@ import { toastr } from "@/libs/toastr";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
 import { resetChat } from "@/stores/tools/chatStore";
+import { prepareToolContextGated } from "@/stores/tools/contextStore";
 import {
   acceptAnswer,
   acceptTransform,
@@ -233,8 +234,10 @@ export function ToolsPopover({
                   e.preventDefault();
                   e.stopPropagation();
                   if (activeItemId) {
-                    requestAnswers(activeItemId, direction);
-                    setDirection("");
+                    void prepareToolContextGated().then(() => {
+                      requestAnswers(activeItemId, direction);
+                      setDirection("");
+                    });
                   }
                 }}
               >

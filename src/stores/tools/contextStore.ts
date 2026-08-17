@@ -1,4 +1,5 @@
 import { createStore } from "zustand/vanilla";
+import { extensionStore } from "@/stores/extensionStore";
 import type { PageSessionData } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
@@ -49,4 +50,22 @@ export function prepareToolContext(): Promise<void> {
       },
     );
   });
+}
+
+const DEFAULT_TOOL_CONTEXT_CAPTURE_COOLDOWN_MS = 60000;
+let lastCaptureAttemptAt = 0;
+
+function getCaptureCooldownMs(): number {
+  return (
+    extensionStore.getState().config?.behavior.toolContextCaptureCooldownMs ??
+    DEFAULT_TOOL_CONTEXT_CAPTURE_COOLDOWN_MS
+  );
+}
+
+export function prepareToolContextGated(): Promise<void> {
+  if (Date.now() - lastCaptureAttemptAt < getCaptureCooldownMs()) {
+    return Promise.resolve();
+  }
+  lastCaptureAttemptAt = Date.now();
+  return prepareToolContext();
 }

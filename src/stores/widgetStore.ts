@@ -1,5 +1,11 @@
 import { createStore } from "zustand/vanilla";
-import { toolsStore } from "@/stores/tools/toolsStore";
+import {
+  configureToolInactivityTimer,
+  touchToolActivity,
+} from "@/libs/tool-inactivity-timer";
+import { extensionStore } from "@/stores/extensionStore";
+import { disarmAutocomplete } from "@/stores/tools/autocompleteStore";
+import { clearToolResults, toolsStore } from "@/stores/tools/toolsStore";
 import type { ResolvedAnswerToolConfig } from "@/types";
 import { onLoginRequired } from "@/utils/login-required";
 import { setForceCloseWidget } from "@/utils/tool-error";
@@ -86,6 +92,7 @@ export function toggleMenu(): void {
 
 export function openChat(): void {
   widgetStore.setState({ chatOpen: true });
+  touchToolActivity();
 }
 
 export function closeChat(): void {
@@ -96,6 +103,7 @@ export function setActiveInputItem(
   item: ResolvedAnswerToolConfig | null,
 ): void {
   widgetStore.setState({ activeInputItem: item });
+  if (item !== null) touchToolActivity();
 }
 
 export function setDirection(text: string): void {
@@ -104,6 +112,26 @@ export function setDirection(text: string): void {
 
 onLoginRequired(forceCloseWidget);
 setForceCloseWidget(forceCloseWidget);
+
+configureToolInactivityTimer({
+  isActive: () => {
+    const { disabled } = extensionStore.getState();
+    const { activeInputItem, chatOpen } = widgetStore.getState();
+    return !disabled || activeInputItem !== null || chatOpen;
+  },
+  onExpire: () => {
+    const { disabled } = extensionStore.getState();
+    const { activeInputItem, chatOpen } = widgetStore.getState();
+    const toolsActive = toolsStore.getState().status !== "idle";
+    if (!disabled) disarmAutocomplete();
+    if (chatOpen) closeChat();
+    if (activeInputItem || toolsActive) {
+      clearToolResults();
+      setActiveInputItem(null);
+    }
+    if (chatOpen || activeInputItem) closePopover("ai");
+  },
+});
 
 toolsStore.subscribe((state, prev) => {
   if (

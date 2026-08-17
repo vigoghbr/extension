@@ -329,6 +329,9 @@ export function resolveConfig(
       topIndicatorMaxDurationMs: raw.behavior.topIndicatorMaxDurationMs,
       bottomIndicatorMaxDurationMs: raw.behavior.bottomIndicatorMaxDurationMs,
       toastMaxDurationMs: raw.behavior.toastMaxDurationMs,
+      toolContextCaptureCooldownMs: raw.behavior.toolContextCaptureCooldownMs,
+      toolInactivityTimeoutMs: raw.behavior.toolInactivityTimeoutMs,
+      scrollFreezeEnabled: raw.behavior.scrollFreezeEnabled,
     },
     overlay: {
       color: raw.overlay.color,

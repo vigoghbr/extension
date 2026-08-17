@@ -1,6 +1,7 @@
 import { createStore } from "zustand/vanilla";
 import { openPlansScreen } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
+import { touchToolActivity } from "@/libs/tool-inactivity-timer";
 import {
   extensionStore,
   getActiveStrategy,
@@ -74,6 +75,7 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
   const toastId = toastr.loading("GENERATING_SUGGESTIONS");
 
   toolsStore.setState({ status: "loading", activeItemId: itemId });
+  touchToolActivity();
 
   sendBackgroundRequest<ToolResponse>(
     { action: "answers_request", text, apiPath },
@@ -103,6 +105,7 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
         suggestions: response.suggestions,
         toolUsageId: response.toolUsageId ?? null,
       });
+      touchToolActivity();
     },
     { onNoToken: () => toastr.dismiss(toastId) },
   );
@@ -111,6 +114,7 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
 export function acceptAnswer(text: string): void {
   navigator.clipboard.writeText(text);
   applyTextWithIdentify(text, "COPIED_CLICK_TO_PASTE");
+  touchToolActivity();
 }
 
 export function setSelectedRange(range: Range | null): void {

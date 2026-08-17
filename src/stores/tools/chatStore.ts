@@ -1,5 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import { toastr } from "@/libs/toastr";
+import { touchToolActivity } from "@/libs/tool-inactivity-timer";
 import type { ChatCreateResponse, ChatSendResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired } from "@/utils/login-required";
@@ -45,6 +46,7 @@ export function sendChatMessage(text: string): void {
     status: "loading",
     errorCode: null,
   }));
+  touchToolActivity();
 
   if (!chatId) {
     createAndSend(trimmed);
@@ -97,6 +99,7 @@ function doSend(chatId: string, message: string): void {
         messages: [...s.messages, botMessage],
         status: "idle",
       }));
+      touchToolActivity();
     },
   );
 }

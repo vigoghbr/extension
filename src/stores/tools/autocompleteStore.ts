@@ -5,12 +5,13 @@ import {
 } from "@/libs/field-identifier";
 import { requireSession } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
+import { touchToolActivity } from "@/libs/tool-inactivity-timer";
 import {
   extensionStore,
   resolveInitialTargetField,
   resolveStrategyForElement,
 } from "@/stores/extensionStore";
-import { prepareToolContext } from "@/stores/tools/contextStore";
+import { prepareToolContextGated } from "@/stores/tools/contextStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { requestLogin } from "@/utils/login-required";
 
@@ -122,6 +123,7 @@ function requestCompletionInternal(
         overlayVisible: true,
         status: "success",
       });
+      touchToolActivity();
 
       toastr.neutral("SUGGESTION_READY", { id: "autocomplete-ready" });
     },
@@ -181,6 +183,7 @@ export function acceptCompletion(): void {
   });
 
   strategy?.pasteText(editor, completion, "insert");
+  touchToolActivity();
 
   toastr.neutral("SUGGESTION_APPLIED");
 
@@ -212,6 +215,7 @@ export function cycleCompletion(direction: "prev" | "next"): void {
   const currentIndex = (state.currentIndex + delta + length) % length;
 
   autocompleteStore.setState({ currentIndex });
+  touchToolActivity();
 }
 
 export function clearSuppress(): void {
@@ -245,6 +249,7 @@ export function reactivateAutocompleteField(): void {
   if (extensionStore.getState().disabled) return;
   if (pendingIdentify) return;
 
+  touchToolActivity();
   clearDebounce();
   extensionStore.setState({ caretCoordinates: null });
   autocompleteStore.setState({
@@ -262,7 +267,8 @@ export function reactivateAutocompleteField(): void {
     pendingIdentify = null;
     autocompleteStore.setState({ autocompleteEditor: editor });
     toastr.neutral("AUTOCOMPLETE_ENABLED");
-    prepareToolContext();
+    prepareToolContextGated();
+    touchToolActivity();
   });
 }
 
@@ -279,7 +285,8 @@ export function armAutocomplete(): void {
       sessionAutocompleteEnabled: true,
     });
     toastr.neutral("AUTOCOMPLETE_ENABLED");
-    prepareToolContext();
+    prepareToolContextGated();
+    touchToolActivity();
     startFieldWatchdog();
   });
 }

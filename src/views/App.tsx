@@ -6,6 +6,7 @@ import { autocompleteStore } from "@/stores/tools/autocompleteStore";
 import cssText from "@/styles/index.compiled.css";
 import type { AiButtonAppearance } from "@/types";
 import Menu from "./Menu";
+import ScrollFreezeOverlay from "./ScrollFreezeOverlay";
 import StickyNotesLayer from "./StickyNotesLayer";
 import Overlay from "./tools/Overlay";
 import { Toaster } from "./ui/sonner";
@@ -59,6 +60,7 @@ export default function App() {
     <TooltipProvider portalContainer={tooltipContainer}>
       <style>{fontCss + cssText + sonnerCss + themeVarsCss}</style>
       {widgetVisible && <Menu />}
+      {widgetVisible && <ScrollFreezeOverlay />}
       {overlayVisible && <Overlay />}
       {colors && <StickyNotesLayer colors={colors} />}
       {colors && <Toaster position="top-right" colors={colors} />}

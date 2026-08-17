@@ -1021,6 +1021,9 @@ export interface ExtensionSettings {
     topIndicatorMaxDurationMs?: number;
     bottomIndicatorMaxDurationMs?: number;
     toastMaxDurationMs?: number;
+    toolContextCaptureCooldownMs?: number;
+    toolInactivityTimeoutMs?: number;
+    scrollFreezeEnabled?: boolean;
   };
   overlay: {
     color: string;
@@ -1083,6 +1086,9 @@ export interface ResolvedBehaviorConfig {
   topIndicatorMaxDurationMs?: number;
   bottomIndicatorMaxDurationMs?: number;
   toastMaxDurationMs?: number;
+  toolContextCaptureCooldownMs?: number;
+  toolInactivityTimeoutMs?: number;
+  scrollFreezeEnabled?: boolean;
 }
 
 export interface ResolvedOverlayConfig {
