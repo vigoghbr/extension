@@ -454,6 +454,8 @@ export interface ExtensionStylesWidget {
   basePaddingH: number;
   logoHeight: number;
   menuWidthMin: number;
+  menuRecentSlots?: number;
+  menuRecentHistoryLimit?: number;
   pillBorderRadius: string;
   circleIconSize: number;
   circleOverlay: string;
@@ -628,6 +630,8 @@ export interface ExtensionLocales {
       notesAIDisableLabel?: LocaleString;
       aiLabel?: LocaleString;
       panelLabel?: LocaleString;
+      moreLabel?: LocaleString;
+      lessLabel?: LocaleString;
       disclaimerText?: LocaleString;
       chatDisclaimerText?: LocaleString;
       chatEmptyHelp?: LocaleString;
@@ -819,6 +823,7 @@ export interface LinkToolConfig {
   type: "link";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: LocaleString;
   linkAction: "open_side_panel" | "open_app" | "open_chat";
@@ -851,6 +856,7 @@ export interface AnswerToolConfig {
   type: "answer";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: LocaleString;
   style?: "primary";
@@ -862,6 +868,7 @@ export interface ToggleToolConfig {
   type: "toggle";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: LocaleString;
   toggleTarget: "autocomplete";
@@ -933,6 +940,8 @@ export interface WidgetConfig {
     notesAIDisableLabel?: LocaleString;
     aiLabel?: LocaleString;
     panelLabel?: LocaleString;
+    moreLabel?: LocaleString;
+    lessLabel?: LocaleString;
     disclaimerText?: LocaleString;
     chatDisclaimerText?: LocaleString;
     chatEmptyHelp?: LocaleString;
@@ -1148,6 +1157,7 @@ export interface ResolvedAnswerToolConfig {
   type: "answer";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: string;
   style?: "primary";
@@ -1159,6 +1169,7 @@ export interface ResolvedToggleToolConfig {
   type: "toggle";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: string;
   toggleTarget: "autocomplete";
@@ -1168,6 +1179,7 @@ export interface ResolvedLinkToolConfig {
   type: "link";
   id: string;
   enabled?: boolean;
+  pinned?: boolean;
   icon?: string;
   label?: string;
   linkAction: "open_side_panel" | "open_app" | "open_chat";
@@ -1242,6 +1254,8 @@ export interface ResolvedWidgetConfig {
     notesAIDisableLabel: string;
     aiLabel: string;
     panelLabel: string;
+    moreLabel: string;
+    lessLabel: string;
     disclaimerText: string;
     chatDisclaimerText: string;
     chatEmptyHelp: string;

@@ -17,6 +17,7 @@ import {
   setEditorFocused,
 } from "@/stores/extensionStore";
 import { initIndicatorListener } from "@/stores/indicatorStore";
+import { loadRecentTools } from "@/stores/menuStore";
 import {
   acceptCompletion,
   autocompleteStore,
@@ -54,6 +55,7 @@ if (!(window as any).__vigoghInit) {
     }).render(<App />);
 
     loadConfig();
+    loadRecentTools();
     void initAuthSessionCache();
     void initSessionCache();
     initIndicatorListener();

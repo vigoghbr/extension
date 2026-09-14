@@ -1,5 +1,13 @@
-import { FolderOpen, MessageSquare, NotebookPen, Sparkles } from "lucide-react";
+import {
+  FolderOpen,
+  type LucideIcon,
+  MessageSquare,
+  NotebookPen,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import React from "react";
+import type { ActivePopover } from "@/stores/widgetStore";
 import type { ResolvedWidgetConfig, ThemeColorSet } from "@/types";
 import { FilesPopover } from "@/views/tools/FilesPopover";
 import { MessagesPopover } from "@/views/tools/MessagesPopover";
@@ -17,8 +25,9 @@ export interface PopoverProps {
 
 export interface PopoverToolRegistration {
   id: string;
-  popoverId: string;
+  popoverId: ActivePopover;
   icon: React.ReactNode;
+  menuIcon?: LucideIcon;
   getLabel: (labels: NonNullable<ResolvedWidgetConfig["menu"]>) => string;
   Popover: React.ComponentType<PopoverProps>;
 }
@@ -29,6 +38,7 @@ export const popoverTools: PopoverToolRegistration[] = [
   {
     id: "files",
     popoverId: "files",
+    menuIcon: FolderOpen,
     icon: React.createElement(FolderOpen, { size: 16 }),
     getLabel: (labels: MenuLabels) => labels.filesLabel,
     Popover: FilesPopover,
@@ -36,6 +46,7 @@ export const popoverTools: PopoverToolRegistration[] = [
   {
     id: "notes",
     popoverId: "notes",
+    menuIcon: NotebookPen,
     icon: React.createElement(NotebookPen, { size: 16 }),
     getLabel: (labels: MenuLabels) => labels.notesLabel,
     Popover: NotesPopover,
@@ -43,6 +54,7 @@ export const popoverTools: PopoverToolRegistration[] = [
   {
     id: "quick-messages",
     popoverId: "messages",
+    menuIcon: Zap,
     icon: React.createElement(MessageSquare, { size: 16 }),
     getLabel: (labels: MenuLabels) => labels.messagesLabel,
     Popover: MessagesPopover,

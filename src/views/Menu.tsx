@@ -1,4 +1,4 @@
-import { FolderOpen, NotebookPen, Settings, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { resolveIcon } from "@/libs/icons";
@@ -9,6 +9,7 @@ import {
   resolveThemeColors,
   setPanelVisible,
 } from "@/stores/extensionStore";
+import { menuStore, recordToolUsage } from "@/stores/menuStore";
 import { stylesStore } from "@/stores/stylesStore";
 import {
   autocompleteStore,
@@ -39,6 +40,18 @@ import { resolveZIndex } from "@/utils/z-index";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 const QUICK_MESSAGES_TOOL_ID = "quick-messages";
+const DEFAULT_RECENT_SLOTS = 3;
+
+interface MenuEntry {
+  id: string;
+  kind: "tool" | "transform";
+  pinned: boolean;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  activeBackground: string;
+  onClick: () => void;
+}
 
 export default function Menu() {
   const config = useStore(extensionStore, (s) => s.config);
@@ -54,11 +67,13 @@ export default function Menu() {
   const activePopovers = useStore(widgetStore, (s) => s.activePopovers);
   const chatOpen = useStore(widgetStore, (s) => s.chatOpen);
   const activeInputItem = useStore(widgetStore, (s) => s.activeInputItem);
+  const recentToolIds = useStore(menuStore, (s) => s.recentToolIds);
   const [pos, setPos] = useState<{ bottom: number; right: number } | null>(
     null,
   );
   const [appearance, setAppearance] = useState<AiButtonAppearance | null>(null);
   const [menuHovered, setMenuHovered] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
   const circleRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +106,10 @@ export default function Menu() {
   useEffect(() => {
     if (overlayVisible && !autocompleteDisabled) openMenu();
   }, [overlayVisible, autocompleteDisabled]);
+
+  useEffect(() => {
+    if (!panelVisible) setMoreExpanded(false);
+  }, [panelVisible]);
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
@@ -153,6 +172,199 @@ export default function Menu() {
 
   const menuLabels = menu;
   const menuBorderRadius = widgetConfig.menuBorderRadius;
+
+  const withUsage = (entry: MenuEntry): MenuEntry => ({
+    ...entry,
+    onClick: () => {
+      recordToolUsage(entry.id);
+      entry.onClick();
+    },
+  });
+
+  const toolEntries = widgetConfig.tools
+    .filter((item) => item.enabled !== false)
+    .flatMap((item): MenuEntry[] => {
+      const Icon = resolveIcon(item.icon);
+      const base = {
+        id: item.id,
+        kind: "tool" as const,
+        pinned: item.pinned === true,
+        icon: <Icon size={pillIconSize} />,
+        label: item.label ?? "",
+      };
+      if (item.type === "answer") {
+        return [
+          {
+            ...base,
+            active: activeInputItem?.id === item.id,
+            activeBackground: colors.accentActiveBackground,
+            onClick: handleSessionItemClick(() => {
+              setDirection("");
+              const itemPages = item.pages?.length
+                ? item.pages
+                : [{ type: "options" as const }];
+              const itemFirstPage = itemPages[0]?.type ?? "options";
+              setActiveInputItem(item);
+              if (itemFirstPage === "options") {
+                requestAnswers(item.id);
+              } else {
+                openMenu();
+              }
+            }),
+          },
+        ];
+      }
+      if (item.type === "toggle" && item.toggleTarget === "autocomplete") {
+        return [
+          {
+            ...base,
+            active: !autocompleteDisabled,
+            activeBackground: colors.toggleEnabledBackground,
+            onClick: handleItemClickNoContext(() => toggleAutocomplete()),
+          },
+        ];
+      }
+      if (item.type === "link") {
+        return [
+          {
+            ...base,
+            active: item.linkAction === "open_chat" && chatOpen,
+            activeBackground: colors.toggleEnabledBackground,
+            onClick: handleItemClickNoContext(() => {
+              if (item.linkAction === "open_chat") {
+                requireSession(() => {
+                  void prepareToolContextGated().then(() => {
+                    openMenu();
+                    openChat();
+                  });
+                });
+              } else if (item.linkAction === "open_app") {
+                closePopover();
+                window.open(
+                  widgetConfig.appUrl,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              } else if (item.href) {
+                closePopover();
+                window.open(item.href, "_blank", "noopener,noreferrer");
+              }
+            }),
+          },
+        ];
+      }
+      return [];
+    });
+
+  const popoverEntries = popoverTools.flatMap((tool): MenuEntry[] => {
+    const Icon = tool.menuIcon;
+    if (!Icon) return [];
+    if (tool.id === QUICK_MESSAGES_TOOL_ID && !quickMessagesEnabled) return [];
+    return [
+      {
+        id: tool.id,
+        kind: "tool",
+        pinned: false,
+        icon: <Icon size={pillIconSize} />,
+        label: tool.getLabel(menuLabels),
+        active: activePopovers.includes(tool.popoverId),
+        activeBackground: colors.toggleEnabledBackground,
+        onClick: handleItemClickNoContext(() =>
+          requireSession(() => togglePopover(tool.popoverId)),
+        ),
+      },
+    ];
+  });
+
+  const transformEntries = widgetConfig.transforms
+    .filter((item) => item.enabled !== false)
+    .map((item): MenuEntry => {
+      const Icon = resolveIcon(item.icon);
+      return {
+        id: item.id,
+        kind: "transform",
+        pinned: false,
+        icon: <Icon size={pillIconSize} />,
+        label: item.label ?? "",
+        active: false,
+        activeBackground: colors.accentActiveBackground,
+        onClick: handleSessionItemClick(() => {
+          openMenu();
+          applyTransform(item.id, item.transformAction, item.autoApply);
+        }),
+      };
+    });
+
+  const pinnedEntries = toolEntries.filter((e) => e.pinned).map(withUsage);
+  const poolEntries = [
+    ...toolEntries.filter((e) => !e.pinned),
+    ...popoverEntries,
+    ...(hasEditorText ? transformEntries : []),
+  ].map(withUsage);
+
+  const unusedRank = recentToolIds.length;
+  const rankOf = (id: string) => {
+    const index = recentToolIds.indexOf(id);
+    return index === -1 ? unusedRank : index;
+  };
+  const recentEntries = [...poolEntries]
+    .sort((a, b) => rankOf(a.id) - rankOf(b.id))
+    .slice(0, styles.widget.menuRecentSlots ?? DEFAULT_RECENT_SLOTS);
+  const hiddenEntries = poolEntries.filter((e) => !recentEntries.includes(e));
+  const hiddenToolEntries = hiddenEntries.filter((e) => e.kind === "tool");
+  const hiddenTransformEntries = hiddenEntries.filter(
+    (e) => e.kind === "transform",
+  );
+
+  const renderEntry = (entry: MenuEntry) => (
+    <PillButton
+      key={entry.id}
+      icon={entry.icon}
+      label={entry.label}
+      active={entry.active}
+      activeBackground={entry.activeBackground}
+      activeBorderColor={styles.widget.pillActiveBorderColor}
+      hoverTransitionMs={styles.widget.pillHoverTransitionMs}
+      hoverBg={colors.itemSecondaryHoverBackground}
+      textColor={colors.textColor}
+      fontSize={pillFontSize}
+      paddingV={pillPaddingV}
+      paddingH={pillPaddingH}
+      borderRadius={pillBorderRadius}
+      onClick={entry.onClick}
+    />
+  );
+
+  const divider = (
+    <div
+      style={{
+        height: "1px",
+        background: colors.dividerColor,
+        margin: "2px 4px",
+      }}
+    />
+  );
+
+  const moreToggle = (
+    <PanelButton
+      icon={
+        moreExpanded ? (
+          <ChevronUp size={pillIconSize} />
+        ) : (
+          <ChevronDown size={pillIconSize} />
+        )
+      }
+      label={moreExpanded ? menuLabels.lessLabel : menuLabels.moreLabel}
+      hoverBg={colors.itemSecondaryHoverBackground}
+      textColor={colors.textColor}
+      fontSize={pillFontSize}
+      paddingV={pillPaddingV}
+      paddingH={pillPaddingH}
+      borderRadius={pillBorderRadius}
+      hoverTransitionMs={styles.widget.pillHoverTransitionMs}
+      onClick={() => setMoreExpanded(!moreExpanded)}
+    />
+  );
 
   const cssVars = `
 :host {
@@ -354,214 +566,27 @@ export default function Menu() {
             <TooltipContent>{config.messages.info.DRAG_LABEL}</TooltipContent>
           </Tooltip>
 
-          {widgetConfig.tools
-            .filter((item) => item.enabled !== false)
-            .map((item) => {
-              const Icon = resolveIcon(item.icon);
-              if (item.type === "answer") {
-                return (
-                  <PillButton
-                    key={item.id}
-                    icon={<Icon size={pillIconSize} />}
-                    label={item.label ?? ""}
-                    active={activeInputItem?.id === item.id}
-                    activeBackground={colors.accentActiveBackground}
-                    activeBorderColor={styles.widget.pillActiveBorderColor}
-                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-                    hoverBg={colors.itemSecondaryHoverBackground}
-                    textColor={colors.textColor}
-                    fontSize={pillFontSize}
-                    paddingV={pillPaddingV}
-                    paddingH={pillPaddingH}
-                    borderRadius={pillBorderRadius}
-                    onClick={handleSessionItemClick(() => {
-                      setDirection("");
-                      const itemPages = item.pages?.length
-                        ? item.pages
-                        : [{ type: "options" as const }];
-                      const itemFirstPage = itemPages[0]?.type ?? "options";
-                      setActiveInputItem(item);
-                      if (itemFirstPage === "options") {
-                        requestAnswers(item.id);
-                      } else {
-                        openMenu();
-                      }
-                    })}
-                  />
-                );
-              }
-              if (
-                item.type === "toggle" &&
-                item.toggleTarget === "autocomplete"
-              ) {
-                return (
-                  <PillButton
-                    key={item.id}
-                    icon={<Icon size={pillIconSize} />}
-                    label={item.label ?? ""}
-                    active={!autocompleteDisabled}
-                    activeBackground={colors.toggleEnabledBackground}
-                    activeBorderColor={styles.widget.pillActiveBorderColor}
-                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-                    hoverBg={colors.itemSecondaryHoverBackground}
-                    textColor={colors.textColor}
-                    fontSize={pillFontSize}
-                    paddingV={pillPaddingV}
-                    paddingH={pillPaddingH}
-                    borderRadius={pillBorderRadius}
-                    onClick={handleItemClickNoContext(() =>
-                      toggleAutocomplete(),
-                    )}
-                  />
-                );
-              }
-              if (item.type === "link") {
-                return (
-                  <PillButton
-                    key={item.id}
-                    icon={<Icon size={pillIconSize} />}
-                    label={item.label ?? ""}
-                    active={item.linkAction === "open_chat" && chatOpen}
-                    activeBackground={colors.toggleEnabledBackground}
-                    activeBorderColor={styles.widget.pillActiveBorderColor}
-                    hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-                    hoverBg={colors.itemSecondaryHoverBackground}
-                    textColor={colors.textColor}
-                    fontSize={pillFontSize}
-                    paddingV={pillPaddingV}
-                    paddingH={pillPaddingH}
-                    borderRadius={pillBorderRadius}
-                    onClick={handleItemClickNoContext(() => {
-                      if (item.linkAction === "open_chat") {
-                        requireSession(() => {
-                          void prepareToolContextGated().then(() => {
-                            openMenu();
-                            openChat();
-                          });
-                        });
-                      } else if (item.linkAction === "open_app") {
-                        closePopover();
-                        window.open(
-                          widgetConfig.appUrl,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      } else if (item.href) {
-                        closePopover();
-                        window.open(item.href, "_blank", "noopener,noreferrer");
-                      }
-                    })}
-                  />
-                );
-              }
-              return null;
-            })}
+          {pinnedEntries.map(renderEntry)}
+          {recentEntries.map(renderEntry)}
 
-          <PillButton
-            icon={<FolderOpen size={pillIconSize} />}
-            label={menuLabels.filesLabel}
-            active={activePopovers.includes("files")}
-            activeBackground={colors.toggleEnabledBackground}
-            activeBorderColor={styles.widget.pillActiveBorderColor}
-            hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-            hoverBg={colors.itemSecondaryHoverBackground}
-            textColor={colors.textColor}
-            fontSize={pillFontSize}
-            paddingV={pillPaddingV}
-            paddingH={pillPaddingH}
-            borderRadius={pillBorderRadius}
-            onClick={handleItemClickNoContext(() =>
-              requireSession(() => togglePopover("files")),
-            )}
-          />
-          <PillButton
-            icon={<NotebookPen size={pillIconSize} />}
-            label={menuLabels.notesLabel}
-            active={activePopovers.includes("notes")}
-            activeBackground={colors.toggleEnabledBackground}
-            activeBorderColor={styles.widget.pillActiveBorderColor}
-            hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-            hoverBg={colors.itemSecondaryHoverBackground}
-            textColor={colors.textColor}
-            fontSize={pillFontSize}
-            paddingV={pillPaddingV}
-            paddingH={pillPaddingH}
-            borderRadius={pillBorderRadius}
-            onClick={handleItemClickNoContext(() =>
-              requireSession(() => togglePopover("notes")),
-            )}
-          />
-          {quickMessagesEnabled && (
-            <PillButton
-              icon={<Zap size={pillIconSize} />}
-              label={menuLabels.messagesLabel}
-              active={activePopovers.includes("messages")}
-              activeBackground={colors.toggleEnabledBackground}
-              activeBorderColor={styles.widget.pillActiveBorderColor}
-              hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-              hoverBg={colors.itemSecondaryHoverBackground}
-              textColor={colors.textColor}
-              fontSize={pillFontSize}
-              paddingV={pillPaddingV}
-              paddingH={pillPaddingH}
-              borderRadius={pillBorderRadius}
-              onClick={handleItemClickNoContext(() =>
-                requireSession(() => togglePopover("messages")),
-              )}
-            />
-          )}
-
-          {hasEditorText &&
-            widgetConfig.transforms.filter((item) => item.enabled !== false)
-              .length > 0 && (
+          {hiddenEntries.length > 0 &&
+            (moreExpanded ? (
               <>
-                <div
-                  style={{
-                    height: "1px",
-                    background: colors.dividerColor,
-                    margin: "2px 4px",
-                  }}
-                />
-                {widgetConfig.transforms
-                  .filter((item) => item.enabled !== false)
-                  .map((item) => {
-                    const Icon = resolveIcon(item.icon);
-                    return (
-                      <PillButton
-                        key={item.id}
-                        icon={<Icon size={pillIconSize} />}
-                        label={item.label ?? ""}
-                        active={false}
-                        activeBackground={colors.accentActiveBackground}
-                        activeBorderColor={styles.widget.pillActiveBorderColor}
-                        hoverTransitionMs={styles.widget.pillHoverTransitionMs}
-                        hoverBg={colors.itemSecondaryHoverBackground}
-                        textColor={colors.textColor}
-                        fontSize={pillFontSize}
-                        paddingV={pillPaddingV}
-                        paddingH={pillPaddingH}
-                        borderRadius={pillBorderRadius}
-                        onClick={handleSessionItemClick(() => {
-                          openMenu();
-                          applyTransform(
-                            item.id,
-                            item.transformAction,
-                            item.autoApply,
-                          );
-                        })}
-                      />
-                    );
-                  })}
+                {hiddenToolEntries.map(renderEntry)}
+                {hiddenTransformEntries.length > 0 && (
+                  <>
+                    {divider}
+                    {hiddenTransformEntries.map(renderEntry)}
+                    {divider}
+                  </>
+                )}
+                {moreToggle}
               </>
-            )}
+            ) : (
+              moreToggle
+            ))}
 
-          <div
-            style={{
-              height: "1px",
-              background: colors.dividerColor,
-              margin: "2px 4px",
-            }}
-          />
+          {divider}
 
           <PanelButton
             icon={<Settings size={pillIconSize} />}
