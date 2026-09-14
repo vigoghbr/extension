@@ -66,6 +66,13 @@ export interface TranscriptionDisarmMessage {
   action: "transcription_disarm";
 }
 
+export interface TranscriptionRequestMessage {
+  action: "transcription_request";
+  audio: string;
+  mimeType: string;
+  durationMs: number;
+}
+
 export interface OffscreenTranscriptionPrepareMessage {
   action: "offscreen_transcription_prepare";
   streamId: string;
@@ -252,6 +259,7 @@ export type ExtensionMessage =
   | TranscriptionArmMessage
   | TranscriptionStopMessage
   | TranscriptionDisarmMessage
+  | TranscriptionRequestMessage
   | OffscreenTranscriptionPrepareMessage
   | OffscreenTranscriptionBeginMessage
   | OffscreenTranscriptionStopMessage

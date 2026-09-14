@@ -57,6 +57,19 @@ async function releaseCapture(): Promise<void> {
   await closeOffscreenDocument();
 }
 
+async function injectInterceptor(tabId: number): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      files: ["interceptor.js"],
+    });
+    logger.info("transcriptions:interceptor-injected", { tabId });
+  } catch (error) {
+    logger.warn("transcriptions:interceptor-failed", { error });
+  }
+}
+
 async function armCapture(tabId: number | undefined): Promise<void> {
   if (!tabId) throw new Error("No target tab for transcription");
 
@@ -71,6 +84,7 @@ async function armCapture(tabId: number | undefined): Promise<void> {
   }
 
   await releaseCapture();
+  await injectInterceptor(tabId);
 
   const streamId = await chrome.tabCapture.getMediaStreamId({
     targetTabId: tabId,
@@ -135,6 +149,47 @@ async function handleCaptureStarted(): Promise<void> {
   await notifyTab(tabId, { action: "transcription_recording" });
 }
 
+async function transcribe(params: {
+  audio: string;
+  mimeType: string;
+  durationMs: number;
+  source: "intercepted" | "tab-capture";
+}) {
+  const endpoint = getEndpoint("transcriptions");
+  const startedAt = Date.now();
+  logger.info("transcriptions:request", {
+    endpoint,
+    source: params.source,
+    mimeType: params.mimeType,
+    durationMs: params.durationMs,
+    base64Length: params.audio.length,
+  });
+
+  try {
+    const { data } = await api.post(endpoint, {
+      audio: params.audio,
+      mimeType: params.mimeType,
+      durationMs: params.durationMs,
+    });
+    const transcription = data.data?.transcription ?? "";
+    logger.info("transcriptions:success", {
+      source: params.source,
+      length: transcription.length,
+      elapsedMs: Date.now() - startedAt,
+    });
+    return { success: true, transcription };
+  } catch (error) {
+    const elapsedMs = Date.now() - startedAt;
+    if (isUnauthorizedError(error)) {
+      logger.warn("transcriptions:unauthorized", { elapsedMs });
+      return { success: false, noToken: true };
+    }
+    const code = extractApiErrorCode(error);
+    logger.error("transcriptions:request-error", { code, elapsedMs, error });
+    return { success: false, errorCode: code ?? undefined };
+  }
+}
+
 async function handleCaptureResult(params: {
   audio?: string;
   mimeType?: string;
@@ -154,50 +209,13 @@ async function handleCaptureResult(params: {
   }
 
   await notifyTab(tabId, { action: "transcription_uploading" });
-
-  const endpoint = getEndpoint("transcriptions");
-  const startedAt = Date.now();
-  logger.info("transcriptions:request", {
-    endpoint,
-    durationMs: params.durationMs,
-    base64Length: params.audio.length,
+  const result = await transcribe({
+    audio: params.audio,
+    mimeType: params.mimeType,
+    durationMs: params.durationMs ?? 1,
+    source: "tab-capture",
   });
-
-  try {
-    const { data } = await api.post(endpoint, {
-      audio: params.audio,
-      mimeType: params.mimeType,
-      durationMs: params.durationMs ?? 1,
-    });
-    const transcription = data.data?.transcription ?? "";
-    logger.info("transcriptions:success", {
-      length: transcription.length,
-      elapsedMs: Date.now() - startedAt,
-    });
-    await notifyTab(tabId, {
-      action: "transcription_result",
-      success: true,
-      transcription,
-    });
-  } catch (error) {
-    const elapsedMs = Date.now() - startedAt;
-    if (isUnauthorizedError(error)) {
-      logger.warn("transcriptions:unauthorized", { elapsedMs });
-      await notifyTab(tabId, {
-        action: "transcription_result",
-        success: false,
-        noToken: true,
-      });
-      return;
-    }
-    const code = extractApiErrorCode(error);
-    logger.error("transcriptions:request-error", { code, elapsedMs, error });
-    await notifyTab(tabId, {
-      action: "transcription_result",
-      success: false,
-      errorCode: code ?? undefined,
-    });
-  }
+  await notifyTab(tabId, { action: "transcription_result", ...result });
 }
 
 export const handleMessages: BackgroundMessageHandler = (
@@ -228,6 +246,20 @@ export const handleMessages: BackgroundMessageHandler = (
     releaseCapture()
       .then(() => sendResponse({ success: true }))
       .catch(() => sendResponse({ success: false }));
+    return true;
+  }
+  if (message.action === "transcription_request") {
+    transcribe({
+      audio: message.audio,
+      mimeType: message.mimeType,
+      durationMs: message.durationMs,
+      source: "intercepted",
+    })
+      .then(sendResponse)
+      .catch((error: Error) => {
+        logger.error("transcriptions:request-failed", { error });
+        sendResponse({ success: false });
+      });
     return true;
   }
   if (message.action === "transcription_capture_started") {

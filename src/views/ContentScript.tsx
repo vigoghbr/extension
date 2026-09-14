@@ -29,9 +29,11 @@ import {
 } from "@/stores/tools/autocompleteStore";
 import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
 import {
+  receiveInterceptedAudio,
   receiveTranscriptionRecording,
   receiveTranscriptionResult,
   receiveTranscriptionUploading,
+  resyncInterceptor,
 } from "@/stores/tools/transcriptionStore";
 import { widgetStore } from "@/stores/widgetStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -319,6 +321,32 @@ if (!(window as any).__vigoghInit) {
       },
       true,
     );
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== window) return;
+      const payload = event.data as
+        | {
+            __vigoghProbe?: boolean;
+            __vigoghCapture?: boolean;
+            event?: string;
+            data?: unknown;
+            encoded?: ArrayBuffer;
+            durationSec?: number;
+          }
+        | undefined;
+      if (payload?.__vigoghCapture && payload.encoded) {
+        receiveInterceptedAudio(payload.encoded, payload.durationSec ?? 0);
+        return;
+      }
+      if (!payload?.__vigoghProbe || !payload.event) return;
+      if (payload.event === "installed") resyncInterceptor();
+      const probeData = payload.data as Record<string, unknown>;
+      if (payload.event === "patch-failed") {
+        logger.warn(`probe:${payload.event}`, { ...probeData });
+        return;
+      }
+      logger.debug(`probe:${payload.event}`, { ...probeData });
+    });
 
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg.action === "extract_page_content") {

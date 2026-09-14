@@ -98,6 +98,7 @@ async function build() {
     sidepanel: path.join(__dirname, "src/sidepanel/index.ts"),
     contentScript: path.join(__dirname, "src/views/ContentScript.tsx"),
     offscreen: path.join(__dirname, "src/offscreen/index.ts"),
+    interceptor: path.join(__dirname, "src/interceptors/index.ts"),
     debug: path.join(__dirname, "src/debug/index.ts"),
   };
 

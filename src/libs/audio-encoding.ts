@@ -5,6 +5,35 @@ const RECORDER_MIME_TYPES = [
   "audio/mp4",
 ];
 
+const GEMINI_AUDIO_MIME_TYPES = [
+  "audio/wav",
+  "audio/mp3",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/aac",
+  "audio/flac",
+  "audio/aiff",
+] as const;
+
+export function isGeminiAudioMimeType(mimeType: string): boolean {
+  return (GEMINI_AUDIO_MIME_TYPES as readonly string[]).includes(mimeType);
+}
+
+export function sniffAudioMimeType(buffer: ArrayBuffer): string | null {
+  const bytes = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 16));
+  const ascii = (start: number, length: number) =>
+    String.fromCharCode(...bytes.subarray(start, start + length));
+
+  if (ascii(0, 4) === "OggS") return "audio/ogg";
+  if (ascii(0, 4) === "fLaC") return "audio/flac";
+  if (ascii(0, 4) === "FORM" && ascii(8, 4) === "AIFF") return "audio/aiff";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 4) === "WAVE") return "audio/wav";
+  if (ascii(0, 3) === "ID3") return "audio/mpeg";
+  if (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) return "audio/mpeg";
+  if (ascii(4, 4) === "ftyp") return "audio/aac";
+  return null;
+}
+
 export function pickRecorderMimeType(): string | undefined {
   return RECORDER_MIME_TYPES.find((type) =>
     MediaRecorder.isTypeSupported(type),
@@ -47,7 +76,7 @@ function bufferToWav(buffer: AudioBuffer): ArrayBuffer {
   return out;
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
   const chunkSize = 0x8000;
@@ -59,11 +88,11 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export async function encodeBlobToWav(
-  blob: Blob,
+export async function encodeToWav(
+  arrayBuffer: ArrayBuffer,
   sampleRate: number,
+  maxDurationSec?: number,
 ): Promise<{ base64: string; durationMs: number }> {
-  const arrayBuffer = await blob.arrayBuffer();
   const decodeContext = new AudioContext();
   let decoded: AudioBuffer;
   try {
@@ -72,7 +101,10 @@ export async function encodeBlobToWav(
     void decodeContext.close();
   }
 
-  const frameCount = Math.ceil(decoded.duration * sampleRate);
+  const duration = maxDurationSec
+    ? Math.min(decoded.duration, maxDurationSec)
+    : decoded.duration;
+  const frameCount = Math.ceil(duration * sampleRate);
   const offline = new OfflineAudioContext(1, frameCount, sampleRate);
   const source = offline.createBufferSource();
   source.buffer = decoded;
@@ -84,4 +116,11 @@ export async function encodeBlobToWav(
     base64: arrayBufferToBase64(bufferToWav(rendered)),
     durationMs: Math.round(rendered.duration * 1000),
   };
+}
+
+export async function encodeBlobToWav(
+  blob: Blob,
+  sampleRate: number,
+): Promise<{ base64: string; durationMs: number }> {
+  return encodeToWav(await blob.arrayBuffer(), sampleRate);
 }
