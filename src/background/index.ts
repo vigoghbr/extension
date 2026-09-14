@@ -15,6 +15,10 @@ import type {
 initLogger("background");
 
 import { toolHandlers } from "@/background/handlers";
+import {
+  handleTabAudible,
+  releaseCaptureForTab,
+} from "@/background/handlers/transcriptions";
 import { capturePageData } from "@/libs/page-capture";
 import {
   openSidePanelForTab,
@@ -36,13 +40,57 @@ chrome.storage.local
 if (__DEV__) {
   let lastToken = "";
   const tokenUrl = chrome.runtime.getURL("build_token.json");
+  const debugUrl = chrome.runtime.getURL("debug.html");
+  const DEBUG_HEARTBEAT_KEY = "vigogh-debug-heartbeat";
+  const DEBUG_RELOADING_KEY = "vigogh-debug-reloading";
+  const DEBUG_HEARTBEAT_MAX_AGE_MS = 5000;
+
+  async function isDebugPageAlive(): Promise<boolean> {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: "debug_ping",
+      });
+      return response?.alive === true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function shouldReopenDebugPage(): Promise<boolean> {
+    const stored = await chrome.storage.local.get([
+      DEBUG_HEARTBEAT_KEY,
+      DEBUG_RELOADING_KEY,
+    ]);
+    if (stored[DEBUG_RELOADING_KEY]) return true;
+
+    const heartbeat = stored[DEBUG_HEARTBEAT_KEY] as number | undefined;
+    if (!heartbeat) return false;
+    return Date.now() - heartbeat <= DEBUG_HEARTBEAT_MAX_AGE_MS;
+  }
+
+  async function reopenDebugPage(): Promise<void> {
+    const shouldReopen = await shouldReopenDebugPage();
+    await chrome.storage.local.remove(DEBUG_RELOADING_KEY);
+    if (!shouldReopen) return;
+    if (await isDebugPageAlive()) return;
+
+    logger.info("background:debug-reopen", {});
+    await chrome.tabs.create({ url: debugUrl, active: false });
+  }
+
+  async function reloadExtension(): Promise<void> {
+    if (await isDebugPageAlive()) {
+      await chrome.storage.local.set({ [DEBUG_RELOADING_KEY]: true });
+    }
+    chrome.runtime.reload();
+  }
 
   function pollReload(): void {
     fetch(tokenUrl, { cache: "no-store" })
       .then((r) => r.json())
       .then((data: { t: string }) => {
         if (lastToken && data.t !== lastToken) {
-          chrome.runtime.reload();
+          void reloadExtension();
           return;
         }
         lastToken = data.t;
@@ -51,6 +99,7 @@ if (__DEV__) {
       .catch(() => setTimeout(pollReload, 2000));
   }
 
+  void reopenDebugPage();
   pollReload();
 }
 
@@ -151,10 +200,17 @@ const injectedTabs = new Set<number>();
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   injectedTabs.delete(tabId);
+  void releaseCaptureForTab(tabId);
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === "loading") injectedTabs.delete(tabId);
+  if (changeInfo.status === "loading") {
+    injectedTabs.delete(tabId);
+    void releaseCaptureForTab(tabId);
+  }
+  if (changeInfo.audible !== undefined) {
+    void handleTabAudible(tabId, changeInfo.audible);
+  }
 });
 
 chrome.action.onClicked.addListener((tab) => {

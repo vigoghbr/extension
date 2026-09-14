@@ -1,4 +1,5 @@
 import {
+  AudioLines,
   Bot,
   Briefcase,
   ExternalLink,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 
 export const ICON_MAP: Record<string, LucideIcon> = {
+  AudioLines,
   Bot,
   Briefcase,
   ExternalLink,

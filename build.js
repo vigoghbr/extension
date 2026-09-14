@@ -15,7 +15,12 @@ if (fs.existsSync(distDir)) {
 }
 fs.mkdirSync(distDir);
 
-const staticFiles = ["manifest.json", "src/sidepanel.html", "src/debug.html"];
+const staticFiles = [
+  "manifest.json",
+  "src/sidepanel.html",
+  "src/debug.html",
+  "src/offscreen.html",
+];
 const assetsDir = path.join(__dirname, "src/assets");
 const excludedAssets = [
   ".DS_Store",
@@ -92,6 +97,7 @@ async function build() {
     background: path.join(__dirname, "src/background/index.ts"),
     sidepanel: path.join(__dirname, "src/sidepanel/index.ts"),
     contentScript: path.join(__dirname, "src/views/ContentScript.tsx"),
+    offscreen: path.join(__dirname, "src/offscreen/index.ts"),
     debug: path.join(__dirname, "src/debug/index.ts"),
   };
 

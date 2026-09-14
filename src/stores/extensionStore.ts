@@ -334,6 +334,8 @@ export function resolveConfig(
       toastMaxDurationMs: raw.behavior.toastMaxDurationMs,
       toolContextCaptureCooldownMs: raw.behavior.toolContextCaptureCooldownMs,
       toolInactivityTimeoutMs: raw.behavior.toolInactivityTimeoutMs,
+      transcriptionMaxDurationMs: raw.behavior.transcriptionMaxDurationMs,
+      transcriptionSampleRate: raw.behavior.transcriptionSampleRate,
       scrollFreezeEnabled: raw.behavior.scrollFreezeEnabled,
     },
     overlay: {

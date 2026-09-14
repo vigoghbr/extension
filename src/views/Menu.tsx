@@ -22,6 +22,10 @@ import {
   toolsStore,
 } from "@/stores/tools/toolsStore";
 import {
+  toggleTranscription,
+  transcriptionStore,
+} from "@/stores/tools/transcriptionStore";
+import {
   closePopover,
   openChat,
   openMenu,
@@ -59,6 +63,7 @@ export default function Menu() {
   const panelVisible = useStore(extensionStore, (s) => s.panelVisible);
   const styles = useStore(stylesStore, (s) => s.styles);
   const autocompleteDisabled = useStore(extensionStore, (s) => s.disabled);
+  const transcriptionStatus = useStore(transcriptionStore, (s) => s.status);
   const userToolsEnabled = useStore(extensionStore, (s) => s.userToolsEnabled);
   const quickMessagesEnabled =
     userToolsEnabled[QUICK_MESSAGES_TOOL_ID] !== false;
@@ -221,6 +226,16 @@ export default function Menu() {
             active: !autocompleteDisabled,
             activeBackground: colors.toggleEnabledBackground,
             onClick: handleItemClickNoContext(() => toggleAutocomplete()),
+          },
+        ];
+      }
+      if (item.type === "toggle" && item.toggleTarget === "transcription") {
+        return [
+          {
+            ...base,
+            active: transcriptionStatus !== "idle",
+            activeBackground: colors.toggleEnabledBackground,
+            onClick: handleItemClickNoContext(() => toggleTranscription()),
           },
         ];
       }

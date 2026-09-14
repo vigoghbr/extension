@@ -6,6 +6,10 @@ import {
 import { extensionStore } from "@/stores/extensionStore";
 import { disarmAutocomplete } from "@/stores/tools/autocompleteStore";
 import { clearToolResults, toolsStore } from "@/stores/tools/toolsStore";
+import {
+  disarmTranscription,
+  transcriptionStore,
+} from "@/stores/tools/transcriptionStore";
 import type { ResolvedAnswerToolConfig } from "@/types";
 import { onLoginRequired } from "@/utils/login-required";
 import { setForceCloseWidget } from "@/utils/tool-error";
@@ -117,13 +121,19 @@ configureToolInactivityTimer({
   isActive: () => {
     const { disabled } = extensionStore.getState();
     const { activeInputItem, chatOpen } = widgetStore.getState();
-    return !disabled || activeInputItem !== null || chatOpen;
+    const transcriptionActive = transcriptionStore.getState().status !== "idle";
+    return (
+      !disabled || activeInputItem !== null || chatOpen || transcriptionActive
+    );
   },
   onExpire: () => {
     const { disabled } = extensionStore.getState();
     const { activeInputItem, chatOpen } = widgetStore.getState();
     const toolsActive = toolsStore.getState().status !== "idle";
     if (!disabled) disarmAutocomplete();
+    if (transcriptionStore.getState().status !== "idle") {
+      disarmTranscription(false);
+    }
     if (chatOpen) closeChat();
     if (activeInputItem || toolsActive) {
       clearToolResults();

@@ -54,6 +54,69 @@ export interface TransformsRequestMessage {
   transformAction: string;
 }
 
+export interface TranscriptionArmMessage {
+  action: "transcription_arm";
+}
+
+export interface TranscriptionStopMessage {
+  action: "transcription_stop";
+}
+
+export interface TranscriptionDisarmMessage {
+  action: "transcription_disarm";
+}
+
+export interface OffscreenTranscriptionPrepareMessage {
+  action: "offscreen_transcription_prepare";
+  streamId: string;
+  maxDurationMs: number;
+  sampleRate: number;
+}
+
+export interface OffscreenTranscriptionBeginMessage {
+  action: "offscreen_transcription_begin";
+}
+
+export interface OffscreenTranscriptionStopMessage {
+  action: "offscreen_transcription_stop";
+}
+
+export interface OffscreenTranscriptionTeardownMessage {
+  action: "offscreen_transcription_teardown";
+}
+
+export interface OffscreenTeardownMessage {
+  action: "offscreen_teardown";
+}
+
+export interface TranscriptionCaptureStartedMessage {
+  action: "transcription_capture_started";
+}
+
+export interface TranscriptionCaptureResultMessage {
+  action: "transcription_capture_result";
+  audio?: string;
+  mimeType?: string;
+  durationMs?: number;
+  errorCode?: string;
+}
+
+export interface TranscriptionRecordingMessage {
+  action: "transcription_recording";
+}
+
+export interface TranscriptionUploadingMessage {
+  action: "transcription_uploading";
+}
+
+export interface TranscriptionResultMessage {
+  action: "transcription_result";
+  success: boolean;
+  transcription?: string;
+  errorCode?: string;
+  noToken?: boolean;
+}
+
 export interface AnswersRequestMessage {
   action: "answers_request";
   text?: string;
@@ -186,6 +249,19 @@ export type ExtensionMessage =
   | AuthCheckMessage
   | ReloadActiveTabMessage
   | TransformsRequestMessage
+  | TranscriptionArmMessage
+  | TranscriptionStopMessage
+  | TranscriptionDisarmMessage
+  | OffscreenTranscriptionPrepareMessage
+  | OffscreenTranscriptionBeginMessage
+  | OffscreenTranscriptionStopMessage
+  | OffscreenTranscriptionTeardownMessage
+  | OffscreenTeardownMessage
+  | TranscriptionCaptureStartedMessage
+  | TranscriptionCaptureResultMessage
+  | TranscriptionRecordingMessage
+  | TranscriptionUploadingMessage
+  | TranscriptionResultMessage
   | AnswersRequestMessage
   | TriggerToolMessage
   | SidepanelTransformsRequestMessage
@@ -330,6 +406,15 @@ export interface ToolResponse {
   success: boolean;
   suggestions?: string[];
   toolUsageId?: string;
+  error?: string;
+  errorCode?: string;
+  noToken?: boolean;
+}
+
+export interface TranscriptionResponse {
+  success: boolean;
+  streamId?: string;
+  transcription?: string;
   error?: string;
   errorCode?: string;
   noToken?: boolean;
@@ -871,7 +956,7 @@ export interface ToggleToolConfig {
   pinned?: boolean;
   icon?: string;
   label?: LocaleString;
-  toggleTarget: "autocomplete";
+  toggleTarget: "autocomplete" | "transcription";
 }
 
 export interface TransformItemConfig {
@@ -1032,6 +1117,8 @@ export interface ExtensionSettings {
     toastMaxDurationMs?: number;
     toolContextCaptureCooldownMs?: number;
     toolInactivityTimeoutMs?: number;
+    transcriptionMaxDurationMs?: number;
+    transcriptionSampleRate?: number;
     scrollFreezeEnabled?: boolean;
   };
   overlay: {
@@ -1097,6 +1184,8 @@ export interface ResolvedBehaviorConfig {
   toastMaxDurationMs?: number;
   toolContextCaptureCooldownMs?: number;
   toolInactivityTimeoutMs?: number;
+  transcriptionMaxDurationMs?: number;
+  transcriptionSampleRate?: number;
   scrollFreezeEnabled?: boolean;
 }
 
@@ -1131,7 +1220,8 @@ export type EndpointKey =
   | "notes"
   | "notesById"
   | "quickMessages"
-  | "quickMessagesById";
+  | "quickMessagesById"
+  | "transcriptions";
 
 export interface ResolvedLoadingAnimationConfig {
   enabled?: boolean;
@@ -1172,7 +1262,7 @@ export interface ResolvedToggleToolConfig {
   pinned?: boolean;
   icon?: string;
   label?: string;
-  toggleTarget: "autocomplete";
+  toggleTarget: "autocomplete" | "transcription";
 }
 
 export interface ResolvedLinkToolConfig {

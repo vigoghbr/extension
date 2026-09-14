@@ -157,3 +157,23 @@ chrome.runtime.onMessage.addListener((message) => {
   if (!paused) appendEntry(message.entry as DebugLogEntry);
   return false;
 });
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.action !== "debug_ping") return false;
+  sendResponse({ alive: true });
+  return false;
+});
+
+const HEARTBEAT_KEY = "vigogh-debug-heartbeat";
+const HEARTBEAT_INTERVAL_MS = 1000;
+
+function writeHeartbeat(): void {
+  chrome.storage.local.set({ [HEARTBEAT_KEY]: Date.now() }).catch(() => {});
+}
+
+writeHeartbeat();
+setInterval(writeHeartbeat, HEARTBEAT_INTERVAL_MS);
+
+window.addEventListener("pagehide", () => {
+  chrome.storage.local.remove(HEARTBEAT_KEY).catch(() => {});
+});

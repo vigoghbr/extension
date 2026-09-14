@@ -28,6 +28,11 @@ import {
   scheduleCompletion,
 } from "@/stores/tools/autocompleteStore";
 import { setHasEditorText, setSelectedRange } from "@/stores/tools/toolsStore";
+import {
+  receiveTranscriptionRecording,
+  receiveTranscriptionResult,
+  receiveTranscriptionUploading,
+} from "@/stores/tools/transcriptionStore";
 import { widgetStore } from "@/stores/widgetStore";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { type AttachableFile, triggerAttach } from "@/utils/files-attach";
@@ -361,6 +366,15 @@ if (!(window as any).__vigoghInit) {
       }
       if (msg.action === "activate_widget") {
         activatePanel();
+      }
+      if (msg.action === "transcription_recording") {
+        receiveTranscriptionRecording();
+      }
+      if (msg.action === "transcription_uploading") {
+        receiveTranscriptionUploading();
+      }
+      if (msg.action === "transcription_result") {
+        receiveTranscriptionResult(msg);
       }
     });
   }
