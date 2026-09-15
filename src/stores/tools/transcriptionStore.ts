@@ -23,7 +23,7 @@ const DEFAULT_SAMPLE_RATE = 16000;
 const ARMED_TOAST_ID = "vigogh-transcription-armed";
 const CAPTURING_TOAST_ID = "vigogh-transcription-capturing";
 const PROCESSING_TOAST_ID = "vigogh-transcription-processing";
-const TRANSCRIPTION_TOOL_ID = "transcription";
+export const TRANSCRIPTION_TOOL_ID = "transcription";
 
 interface TranscriptionState {
   status: TranscriptionStatus;

@@ -126,6 +126,7 @@ export interface TranscriptionResultMessage {
 
 export interface AnswersRequestMessage {
   action: "answers_request";
+  direction?: string;
   text?: string;
   apiPath?: string;
 }

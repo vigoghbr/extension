@@ -8,6 +8,7 @@ import {
   resolveEditorWithStrategy,
 } from "@/stores/extensionStore";
 import { autocompleteStore } from "@/stores/tools/autocompleteStore";
+import { prepareToolContext } from "@/stores/tools/contextStore";
 import type { ResolvedAnswerToolConfig, ToolResponse } from "@/types";
 import { applyTextWithIdentify } from "@/utils/apply-text";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -25,6 +26,7 @@ interface AnswersState {
   hasEditorText: boolean;
   errorCode: string | null;
   toolUsageId: string | null;
+  answerText: string | null;
 }
 
 export const toolsStore = createStore<AnswersState>()(() => ({
@@ -35,11 +37,13 @@ export const toolsStore = createStore<AnswersState>()(() => ({
   hasEditorText: false,
   errorCode: null,
   toolUsageId: null,
+  answerText: null,
 }));
 
 export function requestAnswers(
   itemId: string,
   directionOverride?: string,
+  answerText?: string,
 ): void {
   if (!isExtensionContextValid()) return;
 
@@ -51,11 +55,37 @@ export function requestAnswers(
       requestLogin();
       return;
     }
-    runRequestAnswers(itemId, directionOverride);
+    runRequestAnswers(itemId, directionOverride, answerText);
   });
 }
 
-function runRequestAnswers(itemId: string, directionOverride?: string): void {
+export function requestAnswersFromText(
+  itemId: string,
+  answerText: string,
+  direction?: string,
+): void {
+  if (!isExtensionContextValid()) return;
+
+  toolsStore.setState({
+    status: "loading",
+    activeItemId: itemId,
+    suggestions: [],
+    errorCode: null,
+    toolUsageId: null,
+    answerText,
+  });
+  touchToolActivity();
+
+  void prepareToolContext().then(() => {
+    requestAnswers(itemId, direction ?? "", answerText);
+  });
+}
+
+function runRequestAnswers(
+  itemId: string,
+  directionOverride?: string,
+  answerText?: string,
+): void {
   if (!isExtensionContextValid()) return;
   const { config } = extensionStore.getState();
   if (!config) return;
@@ -67,18 +97,24 @@ function runRequestAnswers(itemId: string, directionOverride?: string): void {
   const apiPath = toolConfig?.apiPath ?? "/v1/tools/answers";
 
   const editorText = editor && strategy ? strategy.getCurrentText(editor) : "";
-  const text =
+  const direction =
     directionOverride !== undefined
       ? directionOverride.trim() || undefined
       : editorText.trim() || undefined;
 
+  const text = answerText ?? toolsStore.getState().answerText ?? undefined;
+
   const toastId = toastr.loading("GENERATING_SUGGESTIONS");
 
-  toolsStore.setState({ status: "loading", activeItemId: itemId });
+  toolsStore.setState({
+    status: "loading",
+    activeItemId: itemId,
+    answerText: text ?? null,
+  });
   touchToolActivity();
 
   sendBackgroundRequest<ToolResponse>(
-    { action: "answers_request", text, apiPath },
+    { action: "answers_request", direction, text, apiPath },
     (response) => {
       toastr.dismiss(toastId);
       if (chrome.runtime.lastError) {
@@ -188,6 +224,7 @@ export function clearAnswers(): void {
     activeItemId: null,
     errorCode: null,
     toolUsageId: null,
+    answerText: null,
   });
 }
 
