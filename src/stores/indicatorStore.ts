@@ -4,6 +4,7 @@ import { autocompleteStore } from "@/stores/tools/autocompleteStore";
 import { chatStore } from "@/stores/tools/chatStore";
 import { contextStore } from "@/stores/tools/contextStore";
 import { toolsStore } from "@/stores/tools/toolsStore";
+import { transcriptionStore } from "@/stores/tools/transcriptionStore";
 import {
   hideIndicator,
   setBottomBorderLoading,
@@ -119,3 +120,8 @@ subscribeLoadingToIndicator(
   hideBottomIndicator,
 );
 subscribeLoadingToIndicator(contextStore, showTopIndicator, hideTopIndicator);
+subscribeLoadingToIndicator(
+  transcriptionStore,
+  showTopIndicator,
+  hideTopIndicator,
+);
