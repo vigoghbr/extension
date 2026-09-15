@@ -609,6 +609,7 @@ export interface ExtensionStylesWindows {
   files: ExtensionStylesWindowDims;
   notes: ExtensionStylesWindowDims;
   messages: ExtensionStylesWindowDims;
+  toolResult: ExtensionStylesWindowDims;
   stickyNote: ExtensionStylesWindowDims;
 }
 

@@ -13,7 +13,7 @@ import {
 import type { ExtensionSettings } from "@/types";
 
 const SESSION_STORAGE_KEY = "vigogh-transcription-session";
-const DEFAULT_MAX_DURATION_MS = 60000;
+const DEFAULT_MAX_DURATION_MS = 300000;
 const DEFAULT_SAMPLE_RATE = 16000;
 
 type TranscriptionSession = { tabId: number };

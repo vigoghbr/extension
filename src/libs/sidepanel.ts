@@ -1,4 +1,7 @@
-import { hasValidSession as hasValidAuthSession } from "@/libs/auth";
+import {
+  hasStoredAuthSession,
+  hasValidSession as hasValidAuthSession,
+} from "@/libs/auth";
 import { hasValidSessionSync } from "@/libs/session";
 import { toastr } from "@/libs/toastr";
 import { isExtensionContextValid } from "@/utils/extension-context";
@@ -6,6 +9,9 @@ import { isExtensionContextValid } from "@/utils/extension-context";
 const PENDING_ROUTE_KEY = "vigogh-pending-route";
 const PLANS_PATH = "/sidepanel/plan";
 const VALIDATE_SESSION_PATH = "/sidepanel/validate-session";
+const RECOVERY_COOLDOWN_MS = 5000;
+
+let lastPanelOpenedAt = 0;
 
 export async function openSidePanelForTab(
   tabId: number | undefined,
@@ -78,22 +84,49 @@ export function openValidateSessionScreen(): Promise<void> {
   return navigateSidepanel(VALIDATE_SESSION_PATH);
 }
 
+function shouldOpenRecoveryPanel(): boolean {
+  const now = Date.now();
+  if (now - lastPanelOpenedAt < RECOVERY_COOLDOWN_MS) return false;
+  lastPanelOpenedAt = now;
+  return true;
+}
+
+function promptLogin(): void {
+  if (shouldOpenRecoveryPanel()) void openSidePanel();
+  if (typeof document === "undefined") return;
+  toastr.error("UNAUTHORIZED", { id: "vigogh-error-UNAUTHORIZED" });
+}
+
+function promptSiteSession(): void {
+  if (shouldOpenRecoveryPanel()) void openValidateSessionScreen();
+  if (typeof document === "undefined") return;
+  toastr.info("VALIDATING_SESSION", {
+    id: "vigogh-info-VALIDATING_SESSION",
+  });
+}
+
+export function promptAuthRecovery(): void {
+  void hasStoredAuthSession().then((authenticated) => {
+    if (!authenticated) {
+      promptLogin();
+      return;
+    }
+    promptSiteSession();
+  });
+}
+
 export function requireSiteSession(action: () => void): boolean {
   if (hasValidSessionSync()) {
     action();
     return true;
   }
-  void openValidateSessionScreen();
-  toastr.info("VALIDATING_SESSION", {
-    id: "vigogh-info-VALIDATING_SESSION",
-  });
+  promptAuthRecovery();
   return false;
 }
 
 export function requireSession(action: () => void): boolean {
   if (!hasValidAuthSession()) {
-    void openSidePanel();
-    toastr.error("UNAUTHORIZED", { id: "vigogh-error-UNAUTHORIZED" });
+    promptAuthRecovery();
     return false;
   }
   return requireSiteSession(action);

@@ -6,7 +6,7 @@ import type {
 } from "@/offscreen/types";
 import type { ExtensionMessage } from "@/types";
 
-const DEFAULT_MAX_DURATION_MS = 60000;
+const DEFAULT_MAX_DURATION_MS = 300000;
 const DEFAULT_SAMPLE_RATE = 16000;
 const MIN_RECORDING_MS = 400;
 

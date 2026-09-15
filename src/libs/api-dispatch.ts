@@ -1,5 +1,6 @@
 import { logger } from "@/libs/logger";
 import { getSessionHeaders } from "@/libs/session";
+import { promptAuthRecovery } from "@/libs/sidepanel";
 import { toastr } from "@/libs/toastr";
 
 type Method = "get" | "post" | "put" | "patch" | "delete";
@@ -57,7 +58,6 @@ export function extractApiSuccessCode(body: unknown): string | null {
 
 function showErrorToast(error: ApiError): void {
   if (typeof document === "undefined") return;
-  if (isUnauthorizedError(error)) return;
   const code = extractApiErrorCode(error);
   if (!code) return;
   toastr.error(code);
@@ -130,16 +130,19 @@ async function dispatch<T>(
   const result = local ? await local(payload) : await sendViaRuntime(payload);
   if (!result.ok) {
     const error = new ApiError({ status: result.status, data: result.data });
-    if (!isUnauthorizedError(error)) {
-      if (result.status === 0) {
-        logger.error("api:network-error", { method, path, error });
-      } else {
-        logger.warn("api:response-error", {
-          method,
-          path,
-          status: result.status,
-        });
-      }
+    if (result.status === 0) {
+      logger.error("api:network-error", { method, path, error });
+    } else {
+      logger.warn("api:response-error", {
+        method,
+        path,
+        status: result.status,
+        code: extractApiErrorCode(error),
+      });
+    }
+    if (isUnauthorizedError(error)) {
+      promptAuthRecovery();
+      throw error;
     }
     showErrorToast(error);
     throw error;

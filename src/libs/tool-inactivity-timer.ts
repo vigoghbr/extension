@@ -1,6 +1,6 @@
 import { extensionStore } from "@/stores/extensionStore";
 
-const DEFAULT_TOOL_INACTIVITY_TIMEOUT_MS = 300000;
+const DEFAULT_TOOL_INACTIVITY_TIMEOUT_MS = 600000;
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 let isActiveFn: () => boolean = () => false;

@@ -5,6 +5,10 @@ import {
 } from "@/libs/tool-inactivity-timer";
 import { extensionStore } from "@/stores/extensionStore";
 import { disarmAutocomplete } from "@/stores/tools/autocompleteStore";
+import {
+  clearToolResult,
+  toolResultStore,
+} from "@/stores/tools/toolResultStore";
 import { clearToolResults, toolsStore } from "@/stores/tools/toolsStore";
 import {
   disarmTranscription,
@@ -122,8 +126,13 @@ configureToolInactivityTimer({
     const { disabled } = extensionStore.getState();
     const { activeInputItem, chatOpen } = widgetStore.getState();
     const transcriptionActive = transcriptionStore.getState().status !== "idle";
+    const hasToolResult = toolResultStore.getState().result !== null;
     return (
-      !disabled || activeInputItem !== null || chatOpen || transcriptionActive
+      !disabled ||
+      activeInputItem !== null ||
+      chatOpen ||
+      transcriptionActive ||
+      hasToolResult
     );
   },
   onExpire: () => {
@@ -131,9 +140,10 @@ configureToolInactivityTimer({
     const { activeInputItem, chatOpen } = widgetStore.getState();
     const toolsActive = toolsStore.getState().status !== "idle";
     if (!disabled) disarmAutocomplete();
-    if (transcriptionStore.getState().status !== "idle") {
+    if (transcriptionStore.getState().status === "armed") {
       disarmTranscription(false);
     }
+    if (toolResultStore.getState().result !== null) clearToolResult();
     if (chatOpen) closeChat();
     if (activeInputItem || toolsActive) {
       clearToolResults();

@@ -21,6 +21,35 @@ interface AuthStorage {
 
 let inflight: Promise<string | null> | null = null;
 
+export async function hasStoredAuthSession(): Promise<boolean> {
+  try {
+    const stored = await chrome.storage.local.get<AuthStorage>([
+      "vigogh-auth-token",
+      "vigogh-auth-refresh-token",
+      "vigogh-auth-token-expires-at",
+    ]);
+    const token = stored["vigogh-auth-token"];
+    const refreshToken = stored["vigogh-auth-refresh-token"];
+    if (!token && !refreshToken) return false;
+    const expiresAt = stored["vigogh-auth-token-expires-at"];
+    if (token && expiresAt) {
+      if (Date.now() < expiresAt - TOKEN_REFRESH_SKEW_MS) return true;
+      return Boolean(refreshToken);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function clearAuthTokens(): Promise<void> {
+  await chrome.storage.local.remove([
+    "vigogh-auth-token",
+    "vigogh-auth-refresh-token",
+    "vigogh-auth-token-expires-at",
+  ]);
+}
+
 export async function exchangeRefreshToken(
   refreshToken: string,
 ): Promise<FirebaseRefreshResponse> {
@@ -66,11 +95,7 @@ export async function refreshAuthToken(): Promise<string | null> {
         message.includes("USER_DISABLED") ||
         message.includes("USER_NOT_FOUND")
       ) {
-        await chrome.storage.local.remove([
-          "vigogh-auth-token",
-          "vigogh-auth-refresh-token",
-          "vigogh-auth-token-expires-at",
-        ]);
+        await clearAuthTokens();
         return null;
       }
       logger.error("auth:refresh-token", {

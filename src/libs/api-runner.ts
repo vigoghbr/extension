@@ -1,7 +1,12 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { maybeRefreshAuthToken, refreshAuthToken } from "@/libs/auth";
+import {
+  clearAuthTokens,
+  maybeRefreshAuthToken,
+  refreshAuthToken,
+} from "@/libs/auth";
 import { API_BASE_URL } from "@/libs/constants";
 import { logger } from "@/libs/logger";
+import { clearSession } from "@/libs/session";
 import type { SeriousErrorPayload } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 
@@ -39,6 +44,18 @@ function classifyError(
     return { status, isAuthError: status === 401 || status === 403 };
   }
   return null;
+}
+
+async function clearLocalAuthState(code: string | null): Promise<void> {
+  try {
+    if (code === "SESSION_REQUIRED") {
+      await clearSession();
+      return;
+    }
+    if (code === "UNAUTHORIZED" || code === null) {
+      await clearAuthTokens();
+    }
+  } catch {}
 }
 
 function isServiceWorkerContext(): boolean {
@@ -101,6 +118,9 @@ axiosApi.interceptors.response.use(
           return axiosApi.request(original);
         }
       }
+      const code = extractErrorCode(error.response?.data);
+      logger.warn("api:unauthorized", { path: original?.url, code });
+      await clearLocalAuthState(code);
     }
     const status = error.response?.status ?? 0;
     const payload = classifyError(status, error.response?.data);

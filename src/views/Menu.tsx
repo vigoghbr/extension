@@ -41,6 +41,7 @@ import type {
 } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { resolveZIndex } from "@/utils/z-index";
+import { ToolResultWindow } from "@/views/tools/ToolResultWindow";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/views/ui/tooltip";
 
 const QUICK_MESSAGES_TOOL_ID = "quick-messages";
@@ -642,6 +643,13 @@ export default function Menu() {
           })}
         </div>
       )}
+
+      <ToolResultWindow
+        colors={colors}
+        config={widgetConfig}
+        bottom={effectiveBottom + activePopovers.length * 24}
+        right={popoverRight + activePopovers.length * 24}
+      />
     </>
   );
 }

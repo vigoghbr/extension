@@ -1,6 +1,7 @@
 import { Bot, Copy, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "zustand";
+import { copyText } from "@/libs/clipboard";
 import cn from "@/libs/cn";
 import { extensionStore } from "@/stores/extensionStore";
 import { stylesStore } from "@/stores/stylesStore";
@@ -86,20 +87,7 @@ export function ChatPanel({ colors }: ChatPanelProps) {
   };
 
   const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (_) {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand("copy");
-      } catch (_) {}
-      document.body.removeChild(ta);
-    }
+    await copyText(text);
     applyTextWithIdentify(text, "COPIED_CLICK_TO_PASTE");
   };
 

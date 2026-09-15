@@ -6,23 +6,24 @@ import {
   sniffAudioMimeType,
 } from "@/libs/audio-encoding";
 import { logger } from "@/libs/logger";
-import { openPlansScreen } from "@/libs/sidepanel";
-import { toast, toastr } from "@/libs/toastr";
+import { openPlansScreen, requireSession } from "@/libs/sidepanel";
+import { toastr } from "@/libs/toastr";
 import { touchToolActivity } from "@/libs/tool-inactivity-timer";
 import { extensionStore } from "@/stores/extensionStore";
+import { showToolResult } from "@/stores/tools/toolResultStore";
 import type { TranscriptionResponse } from "@/types";
 import { isExtensionContextValid } from "@/utils/extension-context";
 import { onLoginRequired, requestLogin } from "@/utils/login-required";
-import { hasAuthToken, sendBackgroundRequest } from "@/utils/runtime-request";
+import { sendBackgroundRequest } from "@/utils/runtime-request";
 
 type TranscriptionStatus = "idle" | "armed" | "recording" | "loading";
 
-const DEFAULT_MAX_TOAST_DURATION_MS = 15000;
-const DEFAULT_MAX_DURATION_MS = 60000;
+const DEFAULT_MAX_DURATION_MS = 300000;
 const DEFAULT_SAMPLE_RATE = 16000;
 const ARMED_TOAST_ID = "vigogh-transcription-armed";
 const CAPTURING_TOAST_ID = "vigogh-transcription-capturing";
 const PROCESSING_TOAST_ID = "vigogh-transcription-processing";
+const TRANSCRIPTION_TOOL_ID = "transcription";
 
 interface TranscriptionState {
   status: TranscriptionStatus;
@@ -40,10 +41,6 @@ function currentStatus(): TranscriptionStatus {
 
 function behavior() {
   return extensionStore.getState().config?.behavior;
-}
-
-function getResultToastDurationMs(): number {
-  return behavior()?.toastMaxDurationMs ?? DEFAULT_MAX_TOAST_DURATION_MS;
 }
 
 function getMaxDurationMs(): number {
@@ -148,13 +145,6 @@ function dismissToasts(): void {
   toastr.dismiss(PROCESSING_TOAST_ID);
 }
 
-function rearmAfterResult(errorCode: string | null): void {
-  if (currentStatus() === "idle") return;
-  transcriptionStore.setState({ status: "armed", errorCode });
-  toastr.persistent("TRANSCRIPTION_ARMED", ARMED_TOAST_ID);
-  touchToolActivity();
-}
-
 export function armTranscription(): void {
   if (!isExtensionContextValid()) return;
 
@@ -215,13 +205,7 @@ export function toggleTranscription(): void {
     return;
   }
 
-  hasAuthToken().then((authed) => {
-    if (!authed) {
-      requestLogin();
-      return;
-    }
-    armTranscription();
-  });
+  requireSession(() => armTranscription());
 }
 
 export function receiveTranscriptionRecording(): void {
@@ -261,20 +245,15 @@ export function receiveTranscriptionResult(
   if (!response?.success || !response.transcription) {
     const code = response?.errorCode ?? "TRANSCRIPTION_EMPTY";
     toastr.error(code);
-    if (code === "SUBSCRIPTION_REQUIRED") {
-      disarmTranscription(false);
-      void openPlansScreen();
-      return;
-    }
-    if (code === "USAGE_LIMIT_EXCEEDED" || code === "TRIAL_EXPIRED") {
-      disarmTranscription(false);
-      return;
-    }
-    rearmAfterResult(code);
+    disarmTranscription(false);
+    if (code === "SUBSCRIPTION_REQUIRED") void openPlansScreen();
     return;
   }
 
-  toast.show(response.transcription, { duration: getResultToastDurationMs() });
+  showToolResult({
+    toolId: TRANSCRIPTION_TOOL_ID,
+    text: response.transcription,
+  });
   disarmTranscription(false);
 }
 

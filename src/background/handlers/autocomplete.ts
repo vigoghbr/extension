@@ -1,6 +1,6 @@
 import { ensureFreshContext } from "@/background/handlers/context-guard";
 import type { BackgroundMessageHandler } from "@/background/handlers/types";
-import api from "@/libs/api-dispatch";
+import api, { isUnauthorizedError } from "@/libs/api-dispatch";
 import { getEndpoint } from "@/libs/endpoints";
 import { getPageId } from "@/libs/page-id";
 import type { AutocompleteResponse } from "@/types";
@@ -30,7 +30,14 @@ async function handleAutocompleteRequest(
       completions: data.data?.completions || [],
       toolUsageId: data.data?.toolUsageId,
     };
-  } catch {
+  } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return {
+        success: false,
+        error: "Unauthorized",
+        reason: "unauthenticated",
+      };
+    }
     return { success: false, error: "API error", reason: "api_error" };
   }
 }
